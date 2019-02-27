@@ -103,7 +103,7 @@ module.exports = {
                 let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(tweet.id_str, tweet.user.screen_name)
                 if (!check) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
-                  queue.add(() => screenshotTweet(client, tweet.id_str)).then(shotBuffer => {
+                  queue.add(() => screenshotTweet(client, tweet.id_str, true)).then(shotBuffer => {
                     let out = {}
 
                     let embed = new MessageEmbed()
@@ -183,7 +183,7 @@ module.exports = {
   }
 }
 
-function screenshotTweet (client, id) {
+function screenshotTweet (client, id, path = false) {
   return new Promise(async (resolve, reject) => {
     if (!browser) browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] })
     const page = await browser.newPage()
@@ -199,8 +199,7 @@ function screenshotTweet (client, id) {
         const { x, y, width, height } = element.getBoundingClientRect()
         return { left: x, top: y, width, height, id: element.id }
       })
-
-      let buffer = await page.screenshot({
+      let screenOptions = {
         clip: {
           x: rect.left,
           quality: 85,
@@ -208,7 +207,10 @@ function screenshotTweet (client, id) {
           width: 550,
           height: rect.height
         }
-      })
+      }
+      if (path) screenOptions.clip.path = `temp/${id}.png`
+
+      let buffer = await page.screenshot(screenOptions)
       await page.close()
       resolve(buffer)
     }, 30 * 1000)
