@@ -183,7 +183,7 @@ module.exports = {
   }
 }
 
-function screenshotTweet (client, id, path = false) {
+function screenshotTweet (client, id, usePath = false) {
   return new Promise(async (resolve, reject) => {
     if (!browser) browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] })
     const page = await browser.newPage()
@@ -208,7 +208,7 @@ function screenshotTweet (client, id, path = false) {
           height: rect.height
         }
       }
-      if (path) screenOptions.clip.path = `temp/${id}.png`
+      if (usePath) screenOptions.clip.path = `temp/${id}.png`
 
       let buffer = await page.screenshot(screenOptions)
       await page.close()
