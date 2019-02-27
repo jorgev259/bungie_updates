@@ -124,7 +124,7 @@ module.exports = {
                     client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
                       m.react('✅').then(() => {
                         m.react('❎').then(() => {
-                          db.prepare('INSERT INTO tweets (id,url) VALUES (?,?)').run(m.id, url)
+                          db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
                         })
                       })
                     })
