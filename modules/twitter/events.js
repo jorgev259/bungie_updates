@@ -17,18 +17,22 @@ module.exports = {
       db.prepare('CREATE TABLE IF NOT EXISTS tweets (id TEXT, user TEXT, PRIMARY KEY (id, user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS processed (user TEXT, tweet TEXT, PRIMARY KEY (user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS approval (id TEXT, url TEXT, PRIMARY KEY (id))').run()
+      db.prepare('CREATE TABLE IF NOT EXISTS tweetChannels (guild TEXT, name TEXT, PRIMARY KEY (guild))').run()
       resolve()
     })
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      console.log(guild)
+      db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'destiny-news\')').run(guild.id)
       if (!guild.channels.some(c => c.name === 'destiny-news')) {
         guild.channels.create('destiny-news')
       }
     },
 
     async ready (client, db, moduleName) {
+      client.guilds.forEach(guild => {
+        db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'destiny-news\')').run(guild.id)
+      })
       run()
 
       async function changeTimeout () {
@@ -65,7 +69,7 @@ module.exports = {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     let msg = { content: `<${url}>`, files: [shotBuffer] }
 
-                    postTweet(client, msg, tweet.id_str, account !== 'UpdatesVanguard')
+                    postTweet(client, db, msg, tweet.id_str, account !== 'UpdatesVanguard')
                   })
                 }
               })
@@ -153,7 +157,7 @@ module.exports = {
             if (!tweet) return
 
             let tweetId = tweet.url.split('/').slice(-2)[0]
-            postTweet(client, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
+            postTweet(client, db, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
 
             reaction.message.delete()
             break
@@ -205,10 +209,11 @@ function screenshotTweet (client, id, usePath = false) {
   })
 }
 
-function postTweet (client, content, tweetId, retweet = true) {
+function postTweet (client, db, content, tweetId, retweet = true) {
   client.guilds.forEach(guild => {
     try {
-      guild.channels.find(c => c.name === 'destiny-news').send(content)
+      let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(guild.id)
+      guild.channels.find(c => c.name === name).send(content)
     } catch (err) {
       console.log(err)
     }
