@@ -65,7 +65,7 @@ module.exports = {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     let msg = { content: `<${url}>`, files: [shotBuffer] }
 
-                    postTweet(client, msg, tweet.id_str)
+                    postTweet(client, msg, tweet.id_str, account !== 'UpdatesVanguard')
                   })
                 }
               })
@@ -205,7 +205,7 @@ function screenshotTweet (client, id, usePath = false) {
   })
 }
 
-function postTweet (client, content, tweetId) {
+function postTweet (client, content, tweetId, retweet = true) {
   client.guilds.forEach(guild => {
     try {
       guild.channels.find(c => c.name === 'destiny-news').send(content)
@@ -214,5 +214,5 @@ function postTweet (client, content, tweetId) {
     }
   })
 
-  twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
+  if (retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
