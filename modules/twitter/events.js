@@ -45,6 +45,7 @@ module.exports = {
       }
 
       function run () {
+        console.log(client.guilds.size)
         console.log('Running twitter cycle')
 
         accounts.forEach(account => {
