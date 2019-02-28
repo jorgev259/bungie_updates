@@ -9,8 +9,6 @@ const { MessageEmbed } = require('discord.js')
 const queue = new PQueue({ concurrency: 1 })
 
 let browser
-let accounts = ['Bungie', 'BungieHelp', 'DestinyTheGame', 'BungieStore']
-let approval = ['A_dmg04', 'Cozmo23', 'DeeJ_BNG']
 let reactions = ['✅', '❎']
 
 module.exports = {
@@ -38,7 +36,7 @@ module.exports = {
           let data = await twit.get('application/rate_limit_status', { resources: 'statuses' })
           let { limit } = data.data.resources.statuses['/statuses/user_timeline']
 
-          let accCount = accounts.length + approval.length
+          let accCount = config.accounts.length + config.approval.length
           console.log(`Next cycle on ${900000 / limit * accCount}`)
           setTimeout(run, 900000 / limit * accCount)
         } catch (err) { console.log(err) }
@@ -48,7 +46,7 @@ module.exports = {
         console.log(client.guilds.map(g => g.name))
         console.log('Running twitter cycle')
 
-        accounts.forEach(account => {
+        config.accounts.forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -67,13 +65,7 @@ module.exports = {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     let msg = { content: `<${url}>`, files: [shotBuffer] }
 
-                    client.guilds.forEach(guild => {
-                      try {
-                        guild.channels.find(c => c.name === 'destiny-news').send(msg)
-                      } catch (err) {
-                        console.log(err)
-                      }
-                    })
+                    postTweet(client, msg, tweet.id_str)
                   })
                 }
               })
@@ -89,7 +81,7 @@ module.exports = {
           }
         })
 
-        approval.forEach(account => {
+        config.approval.forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -160,13 +152,8 @@ module.exports = {
             let tweet = db.prepare('SELECT url FROM approval WHERE id=?').get(reaction.message.id)
             if (!tweet) return
 
-            client.guilds.forEach(guild => {
-              try {
-                guild.channels.find(c => c.name === 'destiny-news').send({ content: `<${tweet.url}>`, files: [`temp/${tweet.url.split('/').slice(-2)[0]}.png`] })
-              } catch (err) {
-                console.log(err)
-              }
-            })
+            let tweetId = tweet.url.split('/').slice(-2)[0]
+            postTweet(client, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
 
             reaction.message.delete()
             break
@@ -216,4 +203,16 @@ function screenshotTweet (client, id, usePath = false) {
       resolve(buffer)
     }, 30 * 1000)
   })
+}
+
+function postTweet (client, content, tweetId) {
+  client.guilds.forEach(guild => {
+    try {
+      guild.channels.find(c => c.name === 'destiny-news').send(content)
+    } catch (err) {
+      console.log(err)
+    }
+  })
+
+  twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
