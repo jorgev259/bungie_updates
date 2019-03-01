@@ -50,7 +50,7 @@ module.exports = {
         console.log(client.guilds.map(g => g.name))
         console.log('Running twitter cycle')
 
-        config.accounts.forEach(account => {
+        config.accounts.concat(config.approval).forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -66,67 +66,43 @@ module.exports = {
                 let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(checkId, tweet.user.screen_name)
                 if (!check) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
-                  queue.add(() => screenshotTweet(client, tweet.id_str)).then(shotBuffer => {
+                  let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
+                  console.log(type)
+
+                  queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account))).then(shotBuffer => {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
-                    let msg = { content: `<${url}>`, files: [shotBuffer] }
+                    switch (type) {
+                      case 'approval':
+                        let out = {}
 
-                    postTweet(client, db, msg, tweet.id_str, tweet.user.screen_name !== 'UpdatesVanguard')
-                  })
-                }
-              })
-            })
-          } else {
-            twit.get('statuses/user_timeline', { screen_name: account, count: 1 }).then(res => {
-              let { data } = res
-              if (data[0]) {
-                db.prepare('INSERT OR IGNORE INTO processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
-              }
-              console.log(`Synced ${account}`)
-            })
-          }
-        })
+                        let embed = new MessageEmbed()
+                          .setAuthor(`${tweet.user.name} | ${tweet.user.screen_name}`, tweet.user.profile_image_url)
+                          .setThumbnail()
+                          .setColor(tweet.user.profile_background_color)
+                          .setTimestamp()
 
-        config.approval.forEach(account => {
-          let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
+                        embed.addField('URL', url)
+                        embed.attachFiles([{ name: 'imageTweet.png', attachment: shotBuffer }])
+                          .setImage('attachment://imageTweet.png')
+                          .setTimestamp()
 
-          if (proc) {
-            twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet }).then(res => {
-              let { data } = res
-              if (data[0]) {
-                db.prepare('INSERT OR IGNORE INTO processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
-                db.prepare('UPDATE processed SET tweet = ? WHERE user = ?').run(data[0].id_str, data[0].user.screen_name)
-              }
-              console.log(`${account}: ${data.length} tweets`)
-              data.forEach(tweet => {
-                let checkId = tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str
-                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(checkId, tweet.user.screen_name)
-                if (!check) {
-                  db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
-                  queue.add(() => screenshotTweet(client, tweet.id_str, true)).then(shotBuffer => {
-                    let out = {}
+                        out.embed = embed
 
-                    let embed = new MessageEmbed()
-                      .setAuthor(`${tweet.user.name} | ${tweet.user.screen_name}`, tweet.user.profile_image_url)
-                      .setThumbnail()
-                      .setColor(tweet.user.profile_background_color)
-                      .setTimestamp()
-
-                    let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
-
-                    embed.addField('URL', url)
-                    embed.attachFiles([{ name: 'imageTweet.png', attachment: shotBuffer }])
-                      .setImage('attachment://imageTweet.png')
-                      .setTimestamp()
-
-                    out.embed = embed
-
-                    client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
-                      m.react('✅').then(() => {
-                        m.react('❎').then(() => {
-                          db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
+                        client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
+                          m.react('✅').then(() => {
+                            m.react('❎').then(() => {
+                              db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
+                            })
+                          })
                         })
-                      })
-                    })
+                        break
+
+                      case 'accounts':
+                        let msg = { content: `<${url}>`, files: [shotBuffer] }
+
+                        postTweet(client, db, msg, tweet.id_str, tweet.user.screen_name !== 'UpdatesVanguard')
+                        break
+                    }
                   })
                 }
               })
@@ -141,6 +117,7 @@ module.exports = {
             })
           }
         })
+
         changeTimeout()
       }
     },
