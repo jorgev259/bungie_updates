@@ -62,7 +62,8 @@ module.exports = {
               }
               console.log(`${account}: ${data.length} tweets`)
               data.forEach(tweet => {
-                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(tweet.id_str, tweet.user.screen_name)
+                let checkId = tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str
+                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(checkId, tweet.user.screen_name)
                 if (!check) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   queue.add(() => screenshotTweet(client, tweet.id_str)).then(shotBuffer => {
@@ -97,7 +98,8 @@ module.exports = {
               }
               console.log(`${account}: ${data.length} tweets`)
               data.forEach(tweet => {
-                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(tweet.id_str, tweet.user.screen_name)
+                let checkId = tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str
+                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(checkId, tweet.user.screen_name)
                 if (!check) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   queue.add(() => screenshotTweet(client, tweet.id_str, true)).then(shotBuffer => {
