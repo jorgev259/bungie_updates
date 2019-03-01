@@ -69,7 +69,7 @@ module.exports = {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     let msg = { content: `<${url}>`, files: [shotBuffer] }
 
-                    postTweet(client, db, msg, tweet.id_str, account !== 'UpdatesVanguard')
+                    postTweet(client, db, msg, tweet.id_str, tweet.user.screen_name !== 'UpdatesVanguard')
                   })
                 }
               })
