@@ -64,7 +64,7 @@ module.exports = {
               data.forEach(tweet => {
                 let checkId = tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str
                 let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(checkId, tweet.user.screen_name)
-                if (!check) {
+                if (!check && (account !== 'UpdatesVanguard' || !tweet.retweeted_status)) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
                   console.log(type)
@@ -100,7 +100,7 @@ module.exports = {
                       case 'accounts':
                         let msg = { content: `<${url}>`, files: [shotBuffer] }
 
-                        postTweet(client, db, msg, tweet.id_str, tweet.user.screen_name !== 'UpdatesVanguard')
+                        postTweet(client, db, msg, tweet.id_str)
                         break
                     }
                   })
@@ -188,7 +188,7 @@ function screenshotTweet (client, id, usePath = false) {
   })
 }
 
-function postTweet (client, db, content, tweetId, retweet = true) {
+function postTweet (client, db, content, tweetId) {
   client.guilds.forEach(guild => {
     try {
       let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(guild.id)
@@ -198,5 +198,5 @@ function postTweet (client, db, content, tweetId, retweet = true) {
     }
   })
 
-  if (retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
+  twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
