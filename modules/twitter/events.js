@@ -62,9 +62,11 @@ module.exports = {
               }
               console.log(`${account}: ${data.length} tweets`)
               data.forEach(tweet => {
-                let checkId = tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str
-                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(checkId, tweet.user.screen_name)
-                if (!check && (account !== 'UpdatesVanguard' || !tweet.retweeted_status)) {
+                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(
+                  tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
+                  tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
+                )
+                if (!check || (tweet.retweeted_status && tweet.text)) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
 
