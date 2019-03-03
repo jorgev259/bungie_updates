@@ -67,7 +67,6 @@ module.exports = {
                 if (!check && (account !== 'UpdatesVanguard' || !tweet.retweeted_status)) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
-                  console.log(type)
 
                   queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account))).then(shotBuffer => {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
