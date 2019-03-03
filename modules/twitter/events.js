@@ -12,8 +12,11 @@ let browser
 let reactions = ['✅', '❎']
 
 module.exports = {
-  reqs (client, db) {
+  reqs (client, db, moduleName) {
     return new Promise((resolve, reject) => {
+      if (!client.data.moduleConfig[moduleName]) client.data.moduleConfig[moduleName] = {}
+      client.data.moduleConfig[moduleName].default = true
+
       db.prepare('CREATE TABLE IF NOT EXISTS tweets (id TEXT, user TEXT, PRIMARY KEY (id, user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS processed (user TEXT, tweet TEXT, PRIMARY KEY (user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS approval (id TEXT, url TEXT, PRIMARY KEY (id))').run()
@@ -23,15 +26,15 @@ module.exports = {
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'destiny-news\')').run(guild.id)
-      if (!guild.channels.some(c => c.name === 'destiny-news')) {
-        guild.channels.create('destiny-news')
+      db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'config.twitterChannel\')').run(guild.id)
+      if (!guild.channels.some(c => c.name === config.twitterChannel)) {
+        guild.channels.create(config.twitterChannel)
       }
     },
 
     async ready (client, db, moduleName) {
       client.guilds.forEach(guild => {
-        db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'destiny-news\')').run(guild.id)
+        db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'config.twitterChannel\')').run(guild.id)
       })
       run()
 
@@ -199,5 +202,5 @@ function postTweet (client, db, content, tweetId) {
     }
   })
 
-  twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
+  if (config.twitter.access_token) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
