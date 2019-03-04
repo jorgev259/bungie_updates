@@ -34,10 +34,6 @@ module.exports = {
     },
 
     async ready (client, db, moduleName) {
-      twit.post('statuses/update', { status: 'Important Links:\n- Discord Bot: https://tiny.cc/VanguardUpdates\n- Support Discord server: https://discord.gg/sAmAFRW\n- Source Code: https://github.com/jorgev259\n- For support contact @ChitoWarlock' }, function (err, data, response) {
-        console.log(err)
-        console.log(data)
-      })
       client.guilds.forEach(guild => {
         db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'config.twitterChannel\')').run(guild.id)
       })
