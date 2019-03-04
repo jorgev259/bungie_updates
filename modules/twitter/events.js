@@ -43,7 +43,7 @@ module.exports = {
           let data = await twit.get('application/rate_limit_status', { resources: 'statuses' })
           let { limit } = data.data.resources.statuses['/statuses/user_timeline']
 
-          let accCount = config.accounts.length + config.approval.length + config.base_account.length
+          let accCount = config.accounts.length + config.approval.length + config.base_accounts.length
           console.log(`Next cycle on ${900000 / limit * accCount}`)
           setTimeout(run, 900000 / limit * accCount)
         } catch (err) { console.log(err) }
@@ -53,7 +53,7 @@ module.exports = {
         console.log(client.guilds.map(g => g.name))
         console.log('Running twitter cycle')
 
-        config.accounts.concat(config.approval).concat(config.base_account).forEach(account => {
+        config.accounts.concat(config.approval).concat(config.base_accounts).forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -69,7 +69,7 @@ module.exports = {
                   tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
-                let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : config.base_account.includes(account) ? 'base_account' : undefined
+                let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : config.base_accounts.includes(account) ? 'base_accounts' : undefined
 
                 console.log({
                   check: check,
