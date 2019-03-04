@@ -69,9 +69,17 @@ module.exports = {
                   tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
-                if (!check || (tweet.retweeted_status && tweet.text)) {
+                let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
+
+                console.log({
+                  check: check,
+                  retweeted: tweet.retweeted_status,
+                  text: tweet.text,
+                  type: type
+                })
+
+                if (!check || (tweet.retweeted_status && tweet.text && type !== 'base_accounts')) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
-                  let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
 
                   queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account))).then(shotBuffer => {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
@@ -102,9 +110,10 @@ module.exports = {
                         break
 
                       case 'accounts':
+                      case 'base_accounts':
                         let msg = { content: `<${url}>`, files: [shotBuffer] }
 
-                        postTweet(client, db, msg, tweet.id_str)
+                        postTweet(client, db, msg, tweet.id_str, type !== 'base_accounts')
                         break
                     }
                   })
@@ -192,7 +201,7 @@ function screenshotTweet (client, id, usePath = false) {
   })
 }
 
-function postTweet (client, db, content, tweetId) {
+function postTweet (client, db, content, tweetId, retweet = false) {
   client.guilds.forEach(guild => {
     try {
       let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(guild.id)
@@ -202,5 +211,5 @@ function postTweet (client, db, content, tweetId) {
     }
   })
 
-  if (config.twitter.access_token) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
+  if (config.twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
