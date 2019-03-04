@@ -30,7 +30,7 @@ module.exports = {
       if (!guild.channels.some(c => c.name === config.twitterChannel)) {
         guild.channels.create(config.twitterChannel)
       }
-      client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
+      updateTopic(client)
     },
 
     async ready (client, db, moduleName) {
@@ -82,9 +82,9 @@ module.exports = {
 
                 if (!check || (tweet.retweeted_status && tweet.text && type !== 'base_accounts')) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
-
+                  updateTopic(client)
                   queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_account.includes(account))).then(shotBuffer => {
-                    client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
+                    updateTopic(client)
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     switch (type) {
                       case 'approval':
@@ -137,7 +137,7 @@ module.exports = {
         changeTimeout()
       }
 
-      client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
+      updateTopic(client)
     },
 
     async messageReactionAdd (client, db, moduleName, reaction, user) {
@@ -217,4 +217,9 @@ function postTweet (client, db, content, tweetId, retweet = false) {
   })
 
   if (config.twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
+}
+
+function updateTopic (client) {
+  let found = client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval')
+  if (found) found.setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
 }
