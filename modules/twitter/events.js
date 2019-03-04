@@ -127,7 +127,7 @@ module.exports = {
                   })
                 }
               })
-            })
+            }).catch(err => console.log(err))
           } else {
             twit.get('statuses/user_timeline', { screen_name: account, count: 1 }).then(res => {
               let { data } = res
