@@ -30,12 +30,14 @@ module.exports = {
       if (!guild.channels.some(c => c.name === config.twitterChannel)) {
         guild.channels.create(config.twitterChannel)
       }
+      client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
     },
 
     async ready (client, db, moduleName) {
       client.guilds.forEach(guild => {
         db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'config.twitterChannel\')').run(guild.id)
       })
+
       run()
 
       async function changeTimeout () {
@@ -50,10 +52,9 @@ module.exports = {
       }
 
       function run () {
-        console.log(client.guilds.map(g => g.name))
         console.log('Running twitter cycle')
-
-        config.accounts.concat(config.approval).concat(config.base_accounts).forEach(account => {
+        console.log(config.accounts.concat(config.approval, config.base_accounts))
+        config.accounts.concat(config.approval, config.base_accounts).forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -63,7 +64,8 @@ module.exports = {
                 db.prepare('INSERT OR IGNORE INTO processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
                 db.prepare('UPDATE processed SET tweet = ? WHERE user = ?').run(data[0].id_str, data[0].user.screen_name)
               }
-              console.log(`${account}: ${data.length} tweets`)
+
+              if (data.length > 0) console.log(`${account}: ${data.length} tweets`)
               data.forEach(tweet => {
                 let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(
                   tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
@@ -82,6 +84,7 @@ module.exports = {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
 
                   queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_account.includes(account))).then(shotBuffer => {
+                    client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     switch (type) {
                       case 'approval':
@@ -133,6 +136,8 @@ module.exports = {
 
         changeTimeout()
       }
+
+      client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
     },
 
     async messageReactionAdd (client, db, moduleName, reaction, user) {
