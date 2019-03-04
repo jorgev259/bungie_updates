@@ -53,8 +53,9 @@ module.exports = {
 
       function run () {
         console.log('Running twitter cycle')
-        console.log(config.accounts.concat(config.approval, config.base_accounts))
-        config.accounts.concat(config.approval, config.base_accounts).forEach(account => {
+        let accounts = config.accounts.concat(config.approval, config.base_accounts)
+        console.log(accounts)
+        accounts.forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -83,7 +84,7 @@ module.exports = {
                 if (!check || (tweet.retweeted_status && tweet.text && type !== 'base_accounts')) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   updateTopic(client)
-                  queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_account.includes(account))).then(shotBuffer => {
+                  queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_accounts.includes(account))).then(shotBuffer => {
                     updateTopic(client)
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     switch (type) {
