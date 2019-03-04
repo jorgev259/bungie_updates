@@ -43,7 +43,7 @@ module.exports = {
           let data = await twit.get('application/rate_limit_status', { resources: 'statuses' })
           let { limit } = data.data.resources.statuses['/statuses/user_timeline']
 
-          let accCount = config.accounts.length + config.approval.length
+          let accCount = config.accounts.length + config.approval.length + config.base_account.length
           console.log(`Next cycle on ${900000 / limit * accCount}`)
           setTimeout(run, 900000 / limit * accCount)
         } catch (err) { console.log(err) }
@@ -53,7 +53,7 @@ module.exports = {
         console.log(client.guilds.map(g => g.name))
         console.log('Running twitter cycle')
 
-        config.accounts.concat(config.approval).forEach(account => {
+        config.accounts.concat(config.approval).concat(config.base_account).forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -69,7 +69,7 @@ module.exports = {
                   tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
-                let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : undefined
+                let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : config.base_account.includes(account) ? 'base_account' : undefined
 
                 console.log({
                   check: check,
@@ -81,7 +81,7 @@ module.exports = {
                 if (!check || (tweet.retweeted_status && tweet.text && type !== 'base_accounts')) {
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
 
-                  queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account))).then(shotBuffer => {
+                  queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_account.includes(account))).then(shotBuffer => {
                     let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
                     switch (type) {
                       case 'approval':
