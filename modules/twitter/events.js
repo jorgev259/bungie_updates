@@ -75,6 +75,7 @@ module.exports = {
                 let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : config.base_accounts.includes(account) ? 'base_accounts' : undefined
 
                 if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
+                  if (tweet.retweeted) tweet = tweet.retweeted_status
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
                   updateTopic(client)
                   queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_accounts.includes(account))).then(shotBuffer => {
