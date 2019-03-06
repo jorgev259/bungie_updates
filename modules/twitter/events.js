@@ -72,7 +72,7 @@ module.exports = {
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
 
-                console.log({ check: check, noCHeck: !check, quote: tweet.is_quote_status, type: type })
+                console.log({ check: check, noCHeck: !check, quote: tweet.is_quote_status, type: type, check3: type !== 'base_accounts', checkF: !check || (tweet.is_quote_status && type !== 'base_accounts') })
                 if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
                   if (tweet.retweeted) tweet = tweet.retweeted_status
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
