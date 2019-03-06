@@ -54,7 +54,6 @@ module.exports = {
       function run () {
         console.log('Running twitter cycle')
         let accounts = config.accounts.concat(config.approval, config.base_accounts)
-        console.log(accounts)
         accounts.forEach(account => {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
