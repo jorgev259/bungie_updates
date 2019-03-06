@@ -14,15 +14,15 @@ let reactions = ['✅', '❎']
 module.exports = {
   reqs (client, db, moduleName) {
     return new Promise((resolve, reject) => {
-      if (!client.data.moduleConfig[moduleName]) client.data.moduleConfig[moduleName] = {}
-      client.data.moduleConfig[moduleName].default = true
-
       db.prepare('CREATE TABLE IF NOT EXISTS tweets (id TEXT, user TEXT, PRIMARY KEY (id, user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS processed (user TEXT, tweet TEXT, PRIMARY KEY (user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS approval (id TEXT, url TEXT, PRIMARY KEY (id))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS tweetChannels (guild TEXT, name TEXT, PRIMARY KEY (guild))').run()
       resolve()
     })
+  },
+  config: {
+    default: true
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
