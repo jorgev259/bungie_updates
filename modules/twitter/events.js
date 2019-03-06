@@ -1,7 +1,7 @@
 const { log } = require('../../utilities.js')
 const puppeteer = require('puppeteer')
 const path = require('path')
-const config = require('../../data/config.json')
+const config = require('../../data/config.js')
 const twit = require('twit')(config.twitter)
 const PQueue = require('p-queue')
 const { MessageEmbed } = require('discord.js')
@@ -45,7 +45,7 @@ module.exports = {
           let data = await twit.get('application/rate_limit_status', { resources: 'statuses' })
           let { limit } = data.data.resources.statuses['/statuses/user_timeline']
 
-          let accCount = config.accounts.length + config.approval.length + config.base_accounts.length
+          let accCount = config.accounts.length
           console.log(`Next cycle on ${900000 / limit * accCount}`)
           setTimeout(run, 900000 / limit * accCount)
         } catch (err) { console.log(err) }
@@ -53,8 +53,8 @@ module.exports = {
 
       function run () {
         console.log('Running twitter cycle')
-        let accounts = config.accounts.concat(config.approval, config.base_accounts)
-        accounts.forEach(account => {
+        config.accounts.forEach(item => {
+          let { account, type } = item
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
@@ -71,49 +71,19 @@ module.exports = {
                   tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
-                let type = config.approval.includes(account) ? 'approval' : config.accounts.includes(account) ? 'accounts' : config.base_accounts.includes(account) ? 'base_accounts' : undefined
+
                 console.log({ check: check, noCHeck: !check, quote: tweet.is_quote_status, type: type })
                 if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
                   if (tweet.retweeted) tweet = tweet.retweeted_status
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
-                  updateTopic(client)
-                  queue.add(() => screenshotTweet(client, tweet.id_str, config.approval.includes(account) || config.base_accounts.includes(account))).then(shotBuffer => {
-                    updateTopic(client)
-                    let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
-                    switch (type) {
-                      case 'approval':
-                        let out = {}
 
-                        let embed = new MessageEmbed()
-                          .setAuthor(`${tweet.user.name} | ${tweet.user.screen_name}`, tweet.user.profile_image_url)
-                          .setThumbnail()
-                          .setColor(tweet.user.profile_background_color)
-                          .setTimestamp()
-
-                        embed.addField('URL', url)
-                        embed.attachFiles([{ name: 'imageTweet.png', attachment: shotBuffer }])
-                          .setImage('attachment://imageTweet.png')
-                          .setTimestamp()
-
-                        out.embed = embed
-
-                        client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
-                          m.react('✅').then(() => {
-                            m.react('❎').then(() => {
-                              db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
-                            })
-                          })
-                        })
-                        break
-
-                      case 'accounts':
-                      case 'base_accounts':
-                        let msg = { content: `<${url}>`, files: [shotBuffer] }
-
-                        postTweet(client, db, msg, tweet.id_str, type !== 'base_accounts')
-                        break
-                    }
-                  })
+                  if (item.filter) {
+                    item.filter(tweet).then(result => {
+                      if (result) evalTweet(client, db, tweet, item)
+                    })
+                  } else {
+                    evalTweet(client, db, tweet, item)
+                  }
                 }
               })
             }).catch(err => console.log(err))
@@ -166,8 +136,62 @@ module.exports = {
   }
 }
 
-function screenshotTweet (client, id, usePath = false) {
+function evalTweet (client, db, tweet, item) {
+  let { type } = item
+  let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
+  if (type !== 'media') {
+    queue.add(() => screenshotTweet(client, tweet.id_str, type === 'approval' || type === 'base_accounts')).then(shotBuffer => {
+      updateTopic(client)
+
+      switch (type) {
+        case 'approval':
+          let out = {}
+
+          let embed = new MessageEmbed()
+            .setAuthor(`${tweet.user.name} | ${tweet.user.screen_name}`, tweet.user.profile_image_url)
+            .setThumbnail()
+            .setColor(tweet.user.profile_background_color)
+            .setTimestamp()
+
+          embed.addField('URL', url)
+          embed.attachFiles([{ name: 'imageTweet.png', attachment: shotBuffer }])
+            .setImage('attachment://imageTweet.png')
+            .setTimestamp()
+
+          out.embed = embed
+
+          client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
+            m.react('✅').then(() => {
+              m.react('❎').then(() => {
+                db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
+              })
+            })
+          })
+          break
+
+        case 'accounts':
+        case 'base_accounts':
+          let msg = { content: `<${url}>`, files: [shotBuffer] }
+
+          postTweet(client, db, msg, tweet.id_str, type !== 'base_accounts')
+          break
+      }
+    })
+  } else {
+    let photos = tweet.entities.media.filter(media => media.type === 'photo')
+    if (photos.length > 0) {
+      postTweet(client, db,
+        { content: `${url}${item.extraText ? item.extraText : ''}`, files: photos.map(e => e.media_url_https) },
+        tweet.id_str,
+        true
+      )
+    }
+  }
+}
+
+function screenshotTweet (client, id, usePath) {
   return new Promise(async (resolve, reject) => {
+    updateTopic(client)
     if (!browser) browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] })
     const page = await browser.newPage()
     page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 5 })
@@ -200,7 +224,7 @@ function screenshotTweet (client, id, usePath = false) {
   })
 }
 
-function postTweet (client, db, content, tweetId, retweet = false) {
+function postTweet (client, db, content, tweetId = null, retweet = false) {
   client.guilds.forEach(guild => {
     try {
       let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(guild.id)
