@@ -26,7 +26,7 @@ module.exports = {
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'config.twitterChannel\')').run(guild.id)
+      db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
       if (!guild.channels.some(c => c.name === config.twitterChannel)) {
         guild.channels.create(config.twitterChannel)
       }
@@ -35,7 +35,7 @@ module.exports = {
 
     async ready (client, db, moduleName) {
       client.guilds.forEach(guild => {
-        db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?, \'config.twitterChannel\')').run(guild.id)
+        db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
       })
 
       run()
