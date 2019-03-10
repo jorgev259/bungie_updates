@@ -58,7 +58,7 @@ module.exports = {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
-            twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet }).then(res => {
+            twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
               let { data } = res
               if (data[0]) {
                 db.prepare('INSERT OR IGNORE INTO processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
