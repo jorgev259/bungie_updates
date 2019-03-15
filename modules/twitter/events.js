@@ -181,7 +181,7 @@ function evalTweet (client, db, tweet, item) {
     let photos = tweet.entities.media.filter(media => media.type === 'photo')
     if (photos.length > 0) {
       postTweet(client, db,
-        { content: `${url}${item.extraText ? item.extraText : ''}`, files: photos.map(e => e.media_url_https) },
+        { content: `<${url}>${item.extraText ? item.extraText : ''}`, files: photos.map(e => e.media_url_https) },
         tweet.id_str,
         true
       )
