@@ -1,4 +1,5 @@
 const { log } = require('../../utilities.js')
+const { broadcast } = require('./util.js')
 const puppeteer = require('puppeteer')
 const path = require('path')
 const config = require('../../data/config.js')
@@ -225,14 +226,7 @@ function screenshotTweet (client, id, usePath) {
 }
 
 function postTweet (client, db, content, tweetId = null, retweet = false) {
-  client.guilds.forEach(guild => {
-    try {
-      let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(guild.id)
-      guild.channels.find(c => c.name === name).send(content)
-    } catch (err) {
-      console.log(err)
-    }
-  })
+  broadcast(client, db, content)
 
   if (config.twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }

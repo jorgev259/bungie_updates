@@ -1,3 +1,4 @@
+const { broadcast } = require('./util.js')
 module.exports.commands = {
   change: {
     usage: 'change #channel-name',
@@ -12,5 +13,22 @@ module.exports.commands = {
       db.prepare('UPDATE tweetChannels SET name = ? WHERE guild = ?').run(name, msg.guild.id)
       msg.channel.send('Settings updated')
     }
+  },
+  broadcast: {
+    desc: 'Sends a message to all servers',
+    config: {
+      ownerOnly: true
+    },
+    async execute (client, msg, param, db) {
+      broadcast(client, db, param.slice(1))
+    }
+  },
+  test: {
+    desc: 'Sends a test announcement.',
+    async execute (client, msg, param, db) {
+      let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(msg.guild.id)
+      msg.guild.channels.find(c => c.name === name).send('Dont mind me, just checking everything is working. (Test Announcemet)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
+    }
   }
+
 }
