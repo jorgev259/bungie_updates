@@ -20,7 +20,7 @@ module.exports.commands = {
       ownerOnly: true
     },
     async execute (client, msg, param, db) {
-      broadcast(client, db, param.slice(1))
+      broadcast(client, db, param.slice(1).join(' '))
     }
   },
   test: {
