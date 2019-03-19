@@ -47,8 +47,9 @@ module.exports = {
           let { limit } = data.data.resources.statuses['/statuses/user_timeline']
 
           let accCount = config.accounts.length
-          console.log(`Next cycle on ${900000 / limit * accCount}`)
-          setTimeout(run, 900000 / limit * accCount)
+          let timeout = 900000 / limit * accCount >= 5000 ? 900000 / limit * accCount : 5000
+          console.log(`Next cycle on ${timeout}`)
+          setTimeout(run, timeout)
         } catch (err) { console.log(err) }
       }
 
