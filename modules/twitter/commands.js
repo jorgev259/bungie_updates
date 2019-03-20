@@ -10,7 +10,8 @@ module.exports.commands = {
       if (msg.mentions.channels.size > 0) name = msg.mentions.channels.first().name
       else name = param[1].toLowerCase()
 
-      db.prepare('UPDATE tweetChannels SET name = ? WHERE guild = ?').run(name, msg.guild.id)
+      db.prepare('UPDATE config SET value = ? WHERE guild = ? AND type=?').run(name, msg.guild.id, 'twitter_channel')
+      // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
       msg.channel.send('Settings updated')
     }
   },
@@ -26,8 +27,9 @@ module.exports.commands = {
   test: {
     desc: 'Sends a test announcement.',
     async execute (client, msg, param, db) {
-      let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(msg.guild.id)
-      msg.guild.channels.find(c => c.name === name).send('Dont mind me, just checking everything is working. (Test Announcemet)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
+      // let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(msg.guild.id)
+      var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
+      msg.guild.channels.find(c => c.name === channel).send('Dont mind me, just checking everything is working. (Test Announcemet)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
     }
   }
 
