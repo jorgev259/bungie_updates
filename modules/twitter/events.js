@@ -18,7 +18,7 @@ module.exports = {
       db.prepare('CREATE TABLE IF NOT EXISTS tweets (id TEXT, user TEXT, PRIMARY KEY (id, user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS processed (user TEXT, tweet TEXT, PRIMARY KEY (user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS approval (id TEXT, url TEXT, PRIMARY KEY (id))').run()
-      db.prepare('CREATE TABLE IF NOT EXISTS tweetChannels (guild TEXT, name TEXT, PRIMARY KEY (guild))').run()
+      // db.prepare('CREATE TABLE IF NOT EXISTS tweetChannels (guild TEXT, name TEXT, PRIMARY KEY (guild))').run()
       resolve()
     })
   },
@@ -27,17 +27,19 @@ module.exports = {
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
-      if (!guild.channels.some(c => c.name === config.twitterChannel)) {
-        guild.channels.create(config.twitterChannel)
+      // db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
+      var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
+
+      if (!guild.channels.some(c => c.name === channel)) {
+        guild.channels.create(channel)
       }
       updateTopic(client)
     },
 
     async ready (client, db, moduleName) {
-      client.guilds.forEach(guild => {
+      /* client.guilds.forEach(guild => {
         db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
-      })
+      }) */
 
       run()
 
