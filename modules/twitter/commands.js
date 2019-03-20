@@ -1,4 +1,7 @@
 const { broadcast } = require('./util.js')
+const config = require('../../data/config.js')
+const { MessageEmbed } = require('discord.js')
+
 module.exports.commands = {
   change: {
     usage: 'change #channel-name',
@@ -22,6 +25,31 @@ module.exports.commands = {
     },
     async execute (client, msg, param, db) {
       broadcast(client, db, param.slice(1).join(' '))
+    }
+  },
+  accounts: {
+    desc: 'Shows a list of the accounts being tracked',
+    async execute (client, msg, param, db) {
+      let perms = {}
+      config.accounts.forEach(element => {
+        let type
+        if (element.type === 'approval') type = 'Approval'
+        else type = 'Automatic'
+        if (!perms[type]) perms[type] = []
+        perms[type].push(element.account)
+      })
+
+      let types = Object.keys(perms)
+
+      const embed = new MessageEmbed()
+        .setTitle(`Twitter Accounts`)
+
+      for (let i = 0; i < types.length; i++) {
+        embed.addField(types[i], perms[types[i]].join('\n'))
+        if (i !== types.length - 1) embed.addBlankField()
+      }
+
+      msg.channel.send(embed)
     }
   },
   test: {
