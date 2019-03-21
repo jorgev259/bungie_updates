@@ -59,12 +59,11 @@ module.exports = {
 }
 
 function refresh (run) {
-  let timeout = config.accountsReddit.length * 2000
-  console.log(`Next cycle on ${timeout}`)
-  setTimeout(run, timeout)
+  console.log(`Next cycle on ${config.rateReddit}`)
+  setTimeout(run, config.rateReddit)
 }
 
 async function post (comment, item) {
   console.log({ status: `${comment.link_title} (Reply by ${item.handle})\n${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}${comment.body}\nSource: ${comment.link_permalink})` })
-  // twit.post('statuses/update', { status: `${comment.link_title} (Reply by ${item.handle})\n${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}${comment.body}\nSource: ${comment.link_permalink}` })
+  twit.post('statuses/update', { status: `${comment.link_title} (Reply by ${item.handle})\n${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}${comment.body}\nSource: ${comment.link_permalink}` })
 }
