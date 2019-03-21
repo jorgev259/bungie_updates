@@ -18,7 +18,6 @@ module.exports = {
       db.prepare('CREATE TABLE IF NOT EXISTS tweets (id TEXT, user TEXT, PRIMARY KEY (id, user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS processed (user TEXT, tweet TEXT, PRIMARY KEY (user))').run()
       db.prepare('CREATE TABLE IF NOT EXISTS approval (id TEXT, url TEXT, PRIMARY KEY (id))').run()
-      // db.prepare('CREATE TABLE IF NOT EXISTS tweetChannels (guild TEXT, name TEXT, PRIMARY KEY (guild))').run()
       resolve()
     })
   },
@@ -27,7 +26,6 @@ module.exports = {
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      // db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
       var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
 
       if (!guild.channels.some(c => c.name === channel)) {
@@ -37,10 +35,6 @@ module.exports = {
     },
 
     async ready (client, db, moduleName) {
-      /* client.guilds.forEach(guild => {
-        db.prepare('INSERT OR IGNORE INTO tweetChannels (guild,name) VALUES (?,?)').run(guild.id, config.twitterChannel)
-      }) */
-
       run()
 
       async function changeTimeout () {
@@ -76,7 +70,6 @@ module.exports = {
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
 
-                console.log({ check: check, noCHeck: !check, quote: tweet.is_quote_status, type: type, check3: type !== 'base_accounts', checkF: !check || (tweet.is_quote_status && type !== 'base_accounts') })
                 if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
                   if (tweet.retweeted) tweet = tweet.retweeted_status
                   db.prepare('INSERT INTO tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)

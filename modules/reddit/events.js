@@ -26,22 +26,23 @@ module.exports = {
           let proc = db.prepare('SELECT id FROM reddits WHERE user = ?').get(account)
 
           if (proc) {
-            let comments = (await r.getUser(account).getComments({ after: proc.id })).sort(function (a, b) { return a.created - b.created })
-            db.prepare('UPDATE reddits SET id =? WHERE user =?').run(comments[comments.length - 1].id, comments[comments.length - 1].author.name)
+            let comments = (await r.getUser(account).getComments({ before: proc.id })).sort(function (a, b) { return a.created - b.created })
+            if (comments.length === 0) return refresh(run)
+            else console.log(`${account}: ${comments.length} tweets`)
+
+            db.prepare('UPDATE reddits SET id =? WHERE user =?').run(`t1_${comments[comments.length - 1].id}`, comments[comments.length - 1].author.name)
 
             comments.forEach(comment => {
               if (item.filter) {
                 item.filter(comment).then(result => {
-                  if (result) post(comment)
+                  if (result) post(comment, item)
                 })
               } else {
                 post(comment)
               }
             })
 
-            let timeout = config.accountsReddit.length * 2000
-            console.log(`Next cycle on ${timeout}`)
-            setTimeout(run, timeout)
+            refresh(run)
           } else {
             let res = await r.getUser(account).getComments({ limit: 1 })
             if (res[0]) {
@@ -49,16 +50,20 @@ module.exports = {
             }
             console.log(`Synced ${res[0].author.name}`)
 
-            let timeout = config.accountsReddit.length * 2000
-            console.log(`Next cycle on ${timeout}`)
-            setTimeout(run, timeout)
+            refresh(run)
           }
         })
       }
-    },
+    }
   }
 }
 
-async function post (comment) {
-  twit.post('statuses/update', { status: `${comment.link_title} (Reply by ${comment.author.name})\n${comment.body}\nSource: ${comment.link_permalin}` })
+function refresh (run) {
+  let timeout = config.accountsReddit.length * 2000
+  console.log(`Next cycle on ${timeout}`)
+  setTimeout(run, timeout)
+}
+
+async function post (comment, item) {
+  twit.post('statuses/update', { status: `${comment.link_title} (Reply by ${item.handle})\n${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}${comment.body}\nSource: ${comment.link_permalink}` })
 }
