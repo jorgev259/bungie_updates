@@ -27,22 +27,20 @@ module.exports = {
 
           if (proc) {
             let comments = (await r.getUser(account).getComments({ before: proc.id })).sort(function (a, b) { return a.created - b.created })
-            if (comments.length === 0) return refresh(run)
-            else console.log(`${account}: ${comments.length} tweets`)
+            if (comments.length > 0) {
+              console.log(`${account}: ${comments.length} tweets`)
+              db.prepare('UPDATE reddits SET id =? WHERE user =?').run(`t1_${comments[comments.length - 1].id}`, comments[comments.length - 1].author.name)
 
-            db.prepare('UPDATE reddits SET id =? WHERE user =?').run(`t1_${comments[comments.length - 1].id}`, comments[comments.length - 1].author.name)
-
-            comments.forEach(comment => {
-              if (item.filter) {
-                item.filter(comment).then(result => {
-                  if (result) post(comment, item)
-                })
-              } else {
-                post(comment)
-              }
-            })
-
-            refresh(run)
+              comments.forEach(comment => {
+                if (item.filter) {
+                  item.filter(comment).then(result => {
+                    if (result) post(comment, item)
+                  })
+                } else {
+                  post(comment)
+                }
+              })
+            }
           } else {
             let res = await r.getUser(account).getComments({ limit: 1 })
             if (res[0]) {
@@ -53,6 +51,8 @@ module.exports = {
             refresh(run)
           }
         })
+
+        refresh(run)
       }
     }
   }
