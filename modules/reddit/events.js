@@ -64,6 +64,5 @@ function refresh (run) {
 }
 
 async function post (comment, item) {
-  console.log({ status: `${comment.link_title} (Reply by ${item.handle})\n${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}${comment.body}\nSource: ${comment.link_permalink})` })
-  twit.post('statuses/update', { status: `${comment.link_title} (Reply by ${item.handle})\n${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}${comment.body}\nSource: ${comment.link_permalink}` })
+  twit.post('statuses/update', { status: `${comment.link_title} (Reply by ${item.handle})\n${comment.body} ${comment.link_permalink}` })
 }
