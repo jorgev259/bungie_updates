@@ -76,26 +76,11 @@ async function post (comment, item) {
     let parts = []
     if (twitter.parseTweet(`${title}${context}${body}`).valid) parts = [`${title}${context}${body}`, `@UpdatesVanguard ${url}`]
     else {
-      /* let parseContext = twitter.parseTweet(`${title}${context}`)
-      if (parseContext.valid) {
-        parts.push(`${title}${context}`)
-      } else {
-        let outString = `${title}${context}`
-        parts.push(`${outString.substring(0, parseContext.validRangeEnd - 2)}...`)
-      }
-
-      let parseBodyURL = twitter.parseTweet(`@UpdatesVanguard ${body}${url}`)
-      if (parseBodyURL.valid) {
-
-      } */
       if (context === '') {
         let parseTitleBody = twitter.parseTweet(`${title}${body}`)
         if (parseTitleBody.valid) parts = [`${title}${body}`, `@UpdatesVanguard ${url}`]
         else {
           let cut = parseTitleBody.validRangeEnd - 3
-          console.log(`${title}${body}`)
-          console.log(`${`${title}${body}`.substring(0, cut)}...`)
-          console.log(`${title}${body}`.substring(cut))
 
           parts.push(`${`${title}${body}`.substring(0, cut)}...`)
 
@@ -109,69 +94,24 @@ async function post (comment, item) {
         parseBody(parts, body, 0, url)
       }
     }
-
-    /* let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
-      if (i > 0) e = `@UpdatesVanguard ${e}`
-      let parseP = twitter.parseTweet(e)
-      if (parseP.valid) return e
-      else return `${e.substr(0, parseP.validRangeEnd - 3)}...`
-    })
-
-    console.log(parts)
-    let finalParts = []
-     while (!parts.every(function (e, i) {
-      let text = i > 0 ? `@UpdatesVanguard ${e}` : e
-      return twitter.parseTweet(text).valid
-    })) {
-      let newParts = []
-      for (var i = 0; i < parts.length; i++) {
-        let e = parts[i]
-        let text = i > 0 ? `@UpdatesVanguard ${e}` : e
-
-        let parsePart = twitter.parseTweet(text)
-        if (parsePart.valid) newParts.push(e)
-        else {
-
-        }
-      }
-
-      parts = newParts
-    }
-    let text = ''
-    for (var i = 0; i < parts.length; i++) {
-      let testText = text + parts[i]
-      if (finalParts.length > 0) testText = `@UpdatesVanguard ${testText}`
-
-      let parsePart = twitter.parseTweet(testText)
-      if (parsePart.valid) text = text + parts[i]
-      else {
-        finalParts.push(text)
-        if (i === parts.length - 1) finalParts.push(parts[i])
-        else text = parts[i]
-      }
-    }
-
-    console.log(finalParts)
-    /* twit.post('statuses/update', { status: finalParts[0] }).then(res => {
+    twit.post('statuses/update', { status: parts[0] }).then(res => {
       let { data } = res
-      finalParts.shift()
-      nextReply(finalParts, data.id_str)
-    }) */
+      parts.shift()
+      nextReply(parts, data.id_str)
+    })
   }
 }
 
 function nextReply (parts, id) {
-  /* twit.post('statuses/update', { status: `@UpdatesVanguard ${parts[0]}`, in_reply_to_status_id: id }).then(res => {
+  twit.post('statuses/update', { status: `@UpdatesVanguard ${parts[0]}`, in_reply_to_status_id: id }).then(res => {
     let { data } = res
     if (parts.length > 1) {
       parts.shift()
       nextReply(parts, data.id_str)
     }
-  }) */
+  })
 }
-
 function parseBody (parts, rest, cut, url) {
-  console.log(rest)
   let working = true
   while (working) {
     let parseCut = twitter.parseTweet(`@UpdatesVanguard ${rest}`)
@@ -187,7 +127,5 @@ function parseBody (parts, rest, cut, url) {
       rest = `@UpdatesVanguard ${rest}`.substring(cut)
       parts.push(`${`@UpdatesVanguard ${rest}`.substring(0, cut)}...`)
     }
-    console.log(parts)
   }
-  console.log('Done')
 }
