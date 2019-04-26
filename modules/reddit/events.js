@@ -76,6 +76,7 @@ async function post (comment, item) {
     let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
       if (i > 0) e = `@UpdatesVanguard ${e}`
       let parseP = twitter.parseTweet(e)
+      console.log(parseP)
       if (parseP.valid) return e
       else return `${e.substr(0, parseP.validDisplayRangeEnd - 3)}...`
     })
@@ -115,20 +116,20 @@ async function post (comment, item) {
     }
 
     console.log(finalParts)
-    twit.post('statuses/update', { status: finalParts[0] }).then(res => {
+    /* twit.post('statuses/update', { status: finalParts[0] }).then(res => {
       let { data } = res
       finalParts.shift()
       nextReply(finalParts, data.id_str)
-    })
+    }) */
   }
 }
 
 function nextReply (parts, id) {
-  twit.post('statuses/update', { status: `@UpdatesVanguard ${parts[0]}`, in_reply_to_status_id: id }).then(res => {
+  /* twit.post('statuses/update', { status: `@UpdatesVanguard ${parts[0]}`, in_reply_to_status_id: id }).then(res => {
     let { data } = res
     if (parts.length > 1) {
       parts.shift()
       nextReply(parts, data.id_str)
     }
-  })
+  }) */
 }
