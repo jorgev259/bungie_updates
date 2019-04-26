@@ -93,6 +93,9 @@ async function post (comment, item) {
         if (parseTitleBody.valid) parts = [`${title}${body}`, `@UpdatesVanguard ${url}`]
         else {
           let cut = parseTitleBody.validRangeEnd + 1 - 3
+          console.log(`${title}${body}`)
+          console.log(`${`${title}${body}`.substring(0, cut)}...`)
+          console.log(`${title}${body}`.substring(cut))
 
           parts.push(`${`${title}${body}`.substring(0, cut)}...`)
 
@@ -168,7 +171,7 @@ function nextReply (parts, id) {
 }
 
 function parseBody (parts, rest, cut, url) {
-  console.log('rest')
+  console.log(rest)
   let working = true
   while (working) {
     let parseCut = twitter.parseTweet(`@UpdatesVanguard ${rest}`)
