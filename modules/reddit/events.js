@@ -169,6 +169,7 @@ function nextReply (parts, id) {
 }
 
 function parseBody (parts, rest, cut, url) {
+  console.log(parts)
   let working = true
   while (working) {
     let parseCut = twitter.parseTweet(`@UpdatesVanguard ${rest}`)
