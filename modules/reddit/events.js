@@ -70,12 +70,12 @@ async function post (comment, item) {
   let url = ` https://reddit.com${comment.permalink}`
   let body = `(Reply by ${item.handle}): ${comment.body}`
 
-  let parse = twitter.txt.parseTweet(`${title}\n${context}${body}${url}`)
+  let parse = twitter.parseTweet(`${title}\n${context}${body}${url}`)
   if (parse.valid) twit.post('statuses/update', { status: `${title}\n${context}${body}${url}` })
   else {
     let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
       if (i > 0) e = `@UpdatesVanguard ${e}`
-      let parseP = twitter.txt.parseTweet(e)
+      let parseP = twitter.parseTweet(e)
       if (parseP.valid) return e
       else return `${e.substr(0, parseP.displayRangeEnd - 3)}...`
     })
@@ -83,14 +83,14 @@ async function post (comment, item) {
     let finalParts = []
     /* while (!parts.every(function (e, i) {
       let text = i > 0 ? `@UpdatesVanguard ${e}` : e
-      return twitter.txt.parseTweet(text).valid
+      return twitter.parseTweet(text).valid
     })) {
       let newParts = []
       for (var i = 0; i < parts.length; i++) {
         let e = parts[i]
         let text = i > 0 ? `@UpdatesVanguard ${e}` : e
 
-        let parsePart = twitter.txt.parseTweet(text)
+        let parsePart = twitter.parseTweet(text)
         if (parsePart.valid) newParts.push(e)
         else {
 
@@ -104,7 +104,7 @@ async function post (comment, item) {
       let testText = text + parts[i]
       if (finalParts.length > 0) testText = `@UpdatesVanguard ${testText}`
 
-      let parsePart = twitter.txt.parseTweet(testText)
+      let parsePart = twitter.parseTweet(testText)
       if (parsePart.valid) text = text + parts[i]
       else {
         finalParts.push(text)
