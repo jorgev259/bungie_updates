@@ -71,7 +71,7 @@ async function post (comment, item) {
   let body = `(Reply by ${item.handle}): ${comment.body}`
 
   let parse = twitter.parseTweet(`${title}${context}${body}${url}`)
-  if (parse.valid) twit.post('statuses/update', { status: `${title}\n${context}${body}${url}` })
+  if (parse.valid) twit.post('statuses/update', { status: `${title}${context}${body}${url}` })
   else {
     let parts = []
     if (twitter.parseTweet(`${title}${context}${body}`).valid) parts = [`${title}${context}${body}`, `@UpdatesVanguard ${url}`]
