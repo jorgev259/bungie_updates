@@ -73,7 +73,13 @@ async function post (comment, item) {
   let parse = twitter.txt.parseTweet(`${title}\n${context}${body}${url}`)
   if (parse.valid) twit.post('statuses/update', { status: `${title}\n${context}${body}${url}` })
   else {
-    let parts = [`${title}\n${context}`, body, url]
+    let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
+      if (i > 0) e = `@UpdatesVanguard ${e}`
+      let parseP = twitter.txt.parseTweet(e)
+      if (parseP.valid) return e
+      else return `${e.substr(0, parseP.displayRangeEnd - 3)}...`
+    })
+    console.log(parts)
     let finalParts = []
     /* while (!parts.every(function (e, i) {
       let text = i > 0 ? `@UpdatesVanguard ${e}` : e
