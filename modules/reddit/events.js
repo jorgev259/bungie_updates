@@ -77,8 +77,9 @@ async function post (comment, item) {
       if (i > 0) e = `@UpdatesVanguard ${e}`
       let parseP = twitter.parseTweet(e)
       if (parseP.valid) return e
-      else return `${e.substr(0, parseP.displayRangeEnd - 3)}...`
+      else return `${e.substr(0, parseP.validDisplayRangeEnd - 3)}...`
     })
+
     console.log(parts)
     let finalParts = []
     /* while (!parts.every(function (e, i) {
