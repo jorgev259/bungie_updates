@@ -154,7 +154,6 @@ async function post (comment, item) {
       finalParts.shift()
       nextReply(finalParts, data.id_str)
     }) */
-    console.log(parts)
   }
 }
 
@@ -169,7 +168,7 @@ function nextReply (parts, id) {
 }
 
 function parseBody (parts, rest, cut, url) {
-  console.log(parts)
+  console.log('rest')
   let working = true
   while (working) {
     let parseCut = twitter.parseTweet(`@UpdatesVanguard ${rest}`)
@@ -185,5 +184,7 @@ function parseBody (parts, rest, cut, url) {
       rest = `@UpdatesVanguard ${rest}`.substring(cut)
       parts.push(`${`@UpdatesVanguard ${rest}`.substring(0, cut)}...`)
     }
+    console.log(parts)
   }
+  console.log('Done')
 }
