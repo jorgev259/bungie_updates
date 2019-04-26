@@ -65,15 +65,49 @@ function refresh (run) {
 }
 
 async function post (comment, item) {
-  let title = `${comment.link_title}`
+  let title = `${comment.link_title}\n`
   let context = [`${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}`]
   let url = ` https://reddit.com${comment.permalink}`
   let body = `(Reply by ${item.handle}): ${comment.body}`
 
-  let parse = twitter.parseTweet(`${title}\n${context}${body}${url}`)
+  let parse = twitter.parseTweet(`${title}${context}${body}${url}`)
   if (parse.valid) twit.post('statuses/update', { status: `${title}\n${context}${body}${url}` })
   else {
-    let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
+    let parts = []
+    if (twitter.parseTweet(`${title}${context}${body}`).valid) parts = [`${title}${context}${body}`, `@UpdatesVanguard ${url}`]
+    else {
+      /* let parseContext = twitter.parseTweet(`${title}${context}`)
+      if (parseContext.valid) {
+        parts.push(`${title}${context}`)
+      } else {
+        let outString = `${title}${context}`
+        parts.push(`${outString.substring(0, parseContext.validRangeEnd - 2)}...`)
+      }
+
+      let parseBodyURL = twitter.parseTweet(`@UpdatesVanguard ${body}${url}`)
+      if (parseBodyURL.valid) {
+
+      } */
+      if (context === '') {
+        let parseTitleBody = twitter.parseTweet(`${title}${body}`)
+        if (parseTitleBody.valid) parts = [`${title}${body}`, `@UpdatesVanguard ${url}`]
+        else {
+          let cut = parseTitleBody.validRangeEnd + 1 - 3
+
+          parts.push(`${`${title}${body}`.substring(0, cut)}...`)
+
+          parseBody(parts, `${title}${body}`.substring(cut), cut, url)
+        }
+      } else {
+        let parseTitleContext = twitter.parseTweet(`${title}${context}`)
+        if (parseTitleContext.valid) parts.push(`${title}${context}`)
+        else parts.push(`${`${title}${context}`.substring(0, parseTitleContext.validRangeEnd + 1 - 3)}...`)
+
+        parseBody(parts, body, 0, url)
+      }
+    }
+
+    /* let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
       if (i > 0) e = `@UpdatesVanguard ${e}`
       let parseP = twitter.parseTweet(e)
       if (parseP.valid) return e
@@ -82,7 +116,7 @@ async function post (comment, item) {
 
     console.log(parts)
     let finalParts = []
-    /* while (!parts.every(function (e, i) {
+     while (!parts.every(function (e, i) {
       let text = i > 0 ? `@UpdatesVanguard ${e}` : e
       return twitter.parseTweet(text).valid
     })) {
@@ -99,7 +133,7 @@ async function post (comment, item) {
       }
 
       parts = newParts
-    } */
+    }
     let text = ''
     for (var i = 0; i < parts.length; i++) {
       let testText = text + parts[i]
@@ -120,6 +154,7 @@ async function post (comment, item) {
       finalParts.shift()
       nextReply(finalParts, data.id_str)
     }) */
+    console.log(parts)
   }
 }
 
@@ -131,4 +166,23 @@ function nextReply (parts, id) {
       nextReply(parts, data.id_str)
     }
   }) */
+}
+
+function parseBody (parts, rest, cut, url) {
+  let working = true
+  while (working) {
+    let parseCut = twitter.parseTweet(`@UpdatesVanguard ${rest}`)
+    if (parseCut.valid) {
+      if (twitter.parseTweet(`@UpdatesVanguard ${rest} ${url}`).valid) parts.push(`@UpdatesVanguard ${rest} ${url}`)
+      else {
+        parts.push(`@UpdatesVanguard ${rest}`)
+        parts.push(`@UpdatesVanguard ${url}`)
+      }
+      working = false
+    } else {
+      cut = parseCut.validRangeEnd + 1 - 3
+      rest = `@UpdatesVanguard ${rest}`.substring(cut)
+      parts.push(`${`@UpdatesVanguard ${rest}`.substring(0, cut)}...`)
+    }
+  }
 }
