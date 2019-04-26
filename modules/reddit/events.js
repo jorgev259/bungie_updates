@@ -97,7 +97,7 @@ async function post (comment, item) {
     twit.post('statuses/update', { status: parts[0] }).then(res => {
       let { data } = res
       parts.shift()
-      nextReply(parts, data.id_str)
+      nextReply(parts.slice(1), data.id_str)
     })
   }
 }
@@ -106,8 +106,7 @@ function nextReply (parts, id) {
   twit.post('statuses/update', { status: parts[0], in_reply_to_status_id: id }).then(res => {
     let { data } = res
     if (parts.length > 1) {
-      parts.shift()
-      nextReply(parts, data.id_str)
+      nextReply(parts.slice(1), data.id_str)
     }
   })
 }
