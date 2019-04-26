@@ -103,7 +103,7 @@ async function post (comment, item) {
 }
 
 function nextReply (parts, id) {
-  twit.post('statuses/update', { status: `@UpdatesVanguard ${parts[0]}`, in_reply_to_status_id: id }).then(res => {
+  twit.post('statuses/update', { status: parts[0], in_reply_to_status_id: id }).then(res => {
     let { data } = res
     if (parts.length > 1) {
       parts.shift()
