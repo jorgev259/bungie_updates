@@ -76,9 +76,8 @@ async function post (comment, item) {
     let parts = [`${title}\n${context}`, body, url].map(function (e, i) {
       if (i > 0) e = `@UpdatesVanguard ${e}`
       let parseP = twitter.parseTweet(e)
-      console.log(parseP)
       if (parseP.valid) return e
-      else return `${e.substr(0, parseP.validDisplayRangeEnd - 3)}...`
+      else return `${e.substr(0, parseP.validRangeEnd - 3)}...`
     })
 
     console.log(parts)
