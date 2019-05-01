@@ -66,7 +66,7 @@ function refresh (run) {
 
 async function post (comment, item) {
   let title = `${comment.link_title}\n`
-  let context = [`${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}`]
+  let context = `${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}`
   let url = ` https://reddit.com${comment.permalink}`
   let body = `(Reply by ${item.handle}): ${comment.body}`
 
