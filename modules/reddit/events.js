@@ -94,9 +94,9 @@ async function post (comment, item) {
         parseBody(parts, body, 0, url)
       }
     }
+    console.log(parts)
     twit.post('statuses/update', { status: parts[0] }).then(res => {
       let { data } = res
-      parts.shift()
       nextReply(parts.slice(1), data.id_str)
     })
   }
