@@ -53,6 +53,7 @@ module.exports = {
 
           if (proc) {
             console.log('proc')
+            console.log({ screen_name: account, since_id: proc.tweet })
             twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
               let { data } = res
               if (data[0]) {
