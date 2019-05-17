@@ -52,8 +52,6 @@ module.exports = {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
-            console.log('proc')
-            console.log({ screen_name: account, since_id: proc.tweet })
             twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
               let { data } = res
               if (data[0]) {
@@ -221,9 +219,7 @@ function screenshotTweet (client, id, usePath) {
 
 function postTweet (client, db, content, tweetId = null, retweet = false) {
   broadcast(client, db, content)
-  console.log('tweet')
   if (config.twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
-  console.log('tweet2')
 }
 
 function updateTopic (client) {
