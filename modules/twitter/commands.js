@@ -57,7 +57,8 @@ module.exports.commands = {
     async execute (client, msg, param, db) {
       // let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(msg.guild.id)
       var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
-      msg.guild.channels.find(c => c.name === channel).send('Dont mind me, just checking everything is working. (Test Announcemet)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
+      console.log(channel)
+      msg.guild.channels.find(c => c.name === channel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
     }
   }
 
