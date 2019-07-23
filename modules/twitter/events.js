@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer')
 const path = require('path')
 const config = require('../../data/config.js')
 const twit = require('twit')(config.twitter)
-const PQueue = require('p-queue')
+const { default: PQueue } = require('p-queue')
 const { MessageEmbed } = require('discord.js')
 
 const queue = new PQueue({ concurrency: 1 })
