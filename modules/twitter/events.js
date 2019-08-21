@@ -52,6 +52,7 @@ module.exports = {
           let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
           if (proc) {
+            console.log({ screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' })
             twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
               let { data } = res
               if (data[0]) {
@@ -79,7 +80,7 @@ module.exports = {
                   }
                 }
               })
-            }).catch(err => console.log(err))
+            }).catch(err => console.log(err.twitterReply.errors))
           } else {
             twit.get('statuses/user_timeline', { screen_name: account, count: 1 }).then(res => {
               let { data } = res
