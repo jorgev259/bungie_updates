@@ -10,7 +10,7 @@ const { MessageEmbed } = require('discord.js')
 const queue = new PQueue({ concurrency: 1 })
 
 let browser
-let reactions = ['✅', '❎']
+const reactions = ['✅', '❎']
 
 module.exports = {
   reqs (client, db, moduleName) {
@@ -48,12 +48,12 @@ module.exports = {
       function run () {
         console.log('Running twitter cycle')
         config.accounts.forEach(item => {
-          let { account, type } = item
-          let proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
+          const { account, type } = item
+          const proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
-          if (proc) {          
+          if (proc) {
             twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
-              let { data } = res
+              const { data } = res
               if (data[0]) {
                 db.prepare('INSERT OR IGNORE INTO processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
                 db.prepare('UPDATE processed SET tweet = ? WHERE user = ?').run(data[0].id_str, data[0].user.screen_name)
@@ -61,7 +61,7 @@ module.exports = {
 
               if (data.length > 0) console.log(`${account}: ${data.length} tweets`)
               data.forEach(tweet => {
-                let check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(
+                const check = db.prepare('SELECT id FROM tweets WHERE id=? AND user=?').get(
                   tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 )
@@ -79,10 +79,10 @@ module.exports = {
                   }
                 }
               })
-            }).catch(err =>{console.log(err); console.log({ screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' })})
+            }).catch(err => { console.log(err); console.log({ screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }) })
           } else {
             twit.get('statuses/user_timeline', { screen_name: account, count: 1 }).then(res => {
-              let { data } = res
+              const { data } = res
               if (data[0]) {
                 db.prepare('INSERT OR IGNORE INTO processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
               }
@@ -106,23 +106,25 @@ module.exports = {
         reactions.includes(reaction.emoji.name)
       ) {
         switch (reaction.emoji.name) {
-          case '✅':
-            let tweet = db.prepare('SELECT url FROM approval WHERE id=?').get(reaction.message.id)
+          case '✅': {
+            const tweet = db.prepare('SELECT url FROM approval WHERE id=?').get(reaction.message.id)
             if (!tweet) return
 
-            let tweetId = tweet.url.split('/').slice(-2)[0]
+            const tweetId = tweet.url.split('/').slice(-2)[0]
             postTweet(client, db, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
 
             reaction.message.delete()
             break
+          }
 
-          case '❎':
-            let tweetFound = db.prepare('SELECT url FROM approval WHERE id=?').get(reaction.message.id)
+          case '❎': {
+            const tweetFound = db.prepare('SELECT url FROM approval WHERE id=?').get(reaction.message.id)
             if (!tweetFound) return
 
             db.prepare('DELETE FROM approval WHERE id=?').run(reaction.message.id)
             reaction.message.delete()
             break
+          }
         }
       }
     }
@@ -130,17 +132,17 @@ module.exports = {
 }
 
 function evalTweet (client, db, tweet, item) {
-  let { type } = item
-  let url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
+  const { type } = item
+  const url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
   if (type !== 'media') {
     queue.add(() => screenshotTweet(client, tweet.id_str, type === 'approval' || type === 'base_accounts')).then(shotBuffer => {
       updateTopic(client)
 
       switch (type) {
-        case 'approval':
-          let out = {}
+        case 'approval': {
+          const out = {}
 
-          let embed = new MessageEmbed()
+          const embed = new MessageEmbed()
             .setAuthor(`${tweet.user.name} | ${tweet.user.screen_name}`, tweet.user.profile_image_url)
             .setThumbnail()
             .setColor(tweet.user.profile_background_color)
@@ -161,17 +163,20 @@ function evalTweet (client, db, tweet, item) {
             })
           })
           break
+        }
 
         case 'accounts':
         case 'base_accounts':
-          let msg = { content: `<${url}>`, files: [shotBuffer] }
+        {
+          const msg = { content: `<${url}>`, files: [shotBuffer] }
 
           postTweet(client, db, msg, tweet.id_str, type !== 'base_accounts')
           break
+        }
       }
     })
   } else {
-    let photos = tweet.entities.media.filter(media => media.type === 'photo')
+    const photos = tweet.entities.media.filter(media => media.type === 'photo')
     if (photos.length > 0) {
       postTweet(client, db,
         { content: `<${url}>${item.extraText ? item.extraText : ''}`, files: photos.map(e => e.media_url_https) },
@@ -199,7 +204,7 @@ function screenshotTweet (client, id, usePath) {
         const { x, y, width, height } = element.getBoundingClientRect()
         return { left: x, top: y, width, height, id: element.id }
       })
-      let screenOptions = {
+      const screenOptions = {
         clip: {
           x: rect.left,
           quality: 85,
@@ -210,7 +215,7 @@ function screenshotTweet (client, id, usePath) {
       }
       if (usePath) screenOptions.path = `temp/${id}.png`
 
-      let buffer = await page.screenshot(screenOptions)
+      const buffer = await page.screenshot(screenOptions)
       await page.close()
       resolve(buffer)
     }, 30 * 1000)
@@ -223,6 +228,6 @@ function postTweet (client, db, content, tweetId = null, retweet = false) {
 }
 
 function updateTopic (client) {
-  let found = client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval')
+  const found = client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval')
   if (found) found.setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
 }
