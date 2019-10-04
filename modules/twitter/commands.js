@@ -27,10 +27,25 @@ module.exports.commands = {
       broadcast(client, db, param.slice(1).join(' '))
     }
   },
+  sync: {
+    desc: 'Forced channel sync',
+    config: {
+      ownerOnly: true
+    },
+    async execute (client, msg, param, db) {
+      client.guilds.forEach(guild => {
+        var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
+
+        if (!guild.channels.some(c => c.name === channel)) {
+          guild.channels.create(channel)
+        }
+      })
+    }
+  },
   accounts: {
     desc: 'Shows a list of the accounts being tracked',
     async execute (client, msg, param, db) {
-      let perms = {}
+      const perms = {}
       config.accounts.forEach(element => {
         let type
         if (element.type === 'approval') type = 'Approval'
@@ -39,10 +54,10 @@ module.exports.commands = {
         perms[type].push(element.account)
       })
 
-      let types = Object.keys(perms)
+      const types = Object.keys(perms)
 
       const embed = new MessageEmbed()
-        .setTitle(`Twitter Accounts`)
+        .setTitle('Twitter Accounts')
 
       for (let i = 0; i < types.length; i++) {
         embed.addField(types[i], perms[types[i]].join('\n'))
