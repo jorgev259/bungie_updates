@@ -33,10 +33,11 @@ module.exports.commands = {
     },
     async execute (client, msg, param, db) {
       client.guilds.forEach(guild => {
-        var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
+        // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
+        const { defaultChannel } = client.data['lotus_config.twitter']
 
-        if (!guild.channels.some(c => c.name === channel)) {
-          guild.channels.create(channel)
+        if (!guild.channels.some(c => c.name === defaultChannel)) {
+          guild.channels.create(defaultChannel)
         }
       })
     }
@@ -71,9 +72,11 @@ module.exports.commands = {
     desc: 'Sends a test announcement.',
     async execute (client, msg, param, db) {
       // let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(msg.guild.id)
-      var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
-      console.log(channel)
-      msg.guild.channels.find(c => c.name === channel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
+      // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
+      // console.log(channel)
+
+      const { defaultChannel } = client.data['lotus_config.twitter']
+      msg.guild.channels.find(c => c.name === defaultChannel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
     }
   }
 
