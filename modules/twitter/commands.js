@@ -44,7 +44,7 @@ module.exports.commands = {
   accounts: {
     desc: 'Shows a list of the accounts being tracked',
     async execute (client, msg, param, db) {
-      const { accounts } = client.data['rss.twitter']
+      const { accounts } = client.data['lotus_config.twitter']
       const perms = {}
       accounts.forEach(element => {
         let type
