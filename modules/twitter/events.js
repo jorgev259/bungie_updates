@@ -2,8 +2,6 @@ const { log } = require('../../utilities.js')
 const { broadcast } = require('./util.js')
 const puppeteer = require('puppeteer')
 const path = require('path')
-const config = require('../../data/config.js')
-const twit = require('twit')(config.twitter)
 const { default: PQueue } = require('p-queue')
 const { MessageEmbed } = require('discord.js')
 
@@ -26,28 +24,31 @@ module.exports = {
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
+      const { defaultChannel } = client.data['rss.twitter']
+      // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, config.default_channel).value
 
-      if (!guild.channels.some(c => c.name === channel)) {
-        guild.channels.create(channel)
+      if (!guild.channels.some(c => c.name === defaultChannel)) {
+        guild.channels.create(defaultChannel)
       }
       updateTopic(client)
     },
 
     async ready (client, db, moduleName) {
+      const { rateTwitter, accounts, twitter } = client.data['twitter.config']
+      const twit = require('twit')(twitter)
       run()
 
       async function changeTimeout () {
         try {
           // let timeout = 900000 / limit * accCount >= 5000 ? 900000 / limit * accCount : 5000
-          console.log(`Next cycle on ${config.rateTwitter}`)
-          setTimeout(run, config.rateTwitter)
+          console.log(`Next cycle on ${rateTwitter}`)
+          setTimeout(run, rateTwitter)
         } catch (err) { console.log(err) }
       }
 
       function run () {
         console.log('Running twitter cycle')
-        config.accounts.forEach(item => {
+        accounts.forEach(item => {
           const { account, type } = item
           const proc = db.prepare('SELECT tweet FROM processed WHERE user = ?').get(account)
 
@@ -98,7 +99,8 @@ module.exports = {
     },
 
     async messageReactionAdd (client, db, moduleName, reaction, user) {
-      if (reaction.message.guild.id !== config.ownerGuild) return
+      const { ownerGuild } = client.data['rss.twitter']
+      if (reaction.message.guild.id !== ownerGuild) return
       if (reaction.message.partial) await reaction.message.fetch()
       if (
         reaction.message.channel.name === 'tweet-approval' &&
@@ -132,6 +134,7 @@ module.exports = {
 }
 
 function evalTweet (client, db, tweet, item) {
+  const { ownerGuild } = client.data['rss.twitter']
   const { type } = item
   const url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
   if (type !== 'media') {
@@ -155,7 +158,7 @@ function evalTweet (client, db, tweet, item) {
 
           out.embed = embed
 
-          client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
+          client.guilds.get(ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
             m.react('✅').then(() => {
               m.react('❎').then(() => {
                 db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
@@ -188,46 +191,57 @@ function evalTweet (client, db, tweet, item) {
 }
 
 function screenshotTweet (client, id, usePath) {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     updateTopic(client)
-    if (!browser) browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] })
-    const page = await browser.newPage()
-    page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 5 })
-
-    page.goto(path.join('file://', __dirname, `index.html?id=${id}`)).catch(err => {
-      log(client, path.join('file://', __dirname, `index.html?id=${id}`))
-      log(client, err.stack)
-    })
-    setTimeout(async () => {
-      const rect = await page.evaluate(() => {
-        const element = document.querySelector('#container')
-        const { x, y, width, height } = element.getBoundingClientRect()
-        return { left: x, top: y, width, height, id: element.id }
+    if (!browser) {
+      puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] }).then(newBrowser => {
+        browser = newBrowser
+        evalPage()
       })
-      const screenOptions = {
-        clip: {
-          x: rect.left,
-          quality: 85,
-          y: rect.top,
-          width: 550,
-          height: rect.height
-        }
-      }
-      if (usePath) screenOptions.path = `temp/${id}.png`
+    } else evalPage()
 
-      const buffer = await page.screenshot(screenOptions)
-      await page.close()
-      resolve(buffer)
-    }, 30 * 1000)
+    async function evalPage () {
+      const page = await browser.newPage()
+      page.setViewport({ width: 1000, height: 600, deviceScaleFactor: 5 })
+
+      page.goto(path.join('file://', __dirname, `index.html?id=${id}`)).catch(err => {
+        log(client, path.join('file://', __dirname, `index.html?id=${id}`))
+        log(client, err.stack)
+      })
+      setTimeout(async () => {
+        const rect = await page.evaluate(() => {
+          const element = document.querySelector('#container')
+          const { x, y, width, height } = element.getBoundingClientRect()
+          return { left: x, top: y, width, height, id: element.id }
+        })
+        const screenOptions = {
+          clip: {
+            x: rect.left,
+            quality: 85,
+            y: rect.top,
+            width: 550,
+            height: rect.height
+          }
+        }
+        if (usePath) screenOptions.path = `temp/${id}.png`
+
+        const buffer = await page.screenshot(screenOptions)
+        await page.close()
+        resolve(buffer)
+      }, 30 * 1000)
+    }
   })
 }
 
 function postTweet (client, db, content, tweetId = null, retweet = false) {
+  const { twitter } = client.data['rss.twitter']
+  const twit = require('twit')(twitter)
   broadcast(client, db, content)
-  if (config.twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
+  if (twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
 
 function updateTopic (client) {
-  const found = client.guilds.get(config.ownerGuild).channels.find(c => c.name === 'tweet-approval')
+  const { ownerGuild } = client.data['rss.twitter']
+  const found = client.guilds.get(ownerGuild).channels.find(c => c.name === 'tweet-approval')
   if (found) found.setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
 }
