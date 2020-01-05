@@ -1,5 +1,4 @@
 const { broadcast } = require('./util.js')
-const config = require('../../data/config.js')
 const { MessageEmbed } = require('discord.js')
 
 module.exports.commands = {
@@ -45,8 +44,9 @@ module.exports.commands = {
   accounts: {
     desc: 'Shows a list of the accounts being tracked',
     async execute (client, msg, param, db) {
+      const { accounts } = client.data['rss.twitter']
       const perms = {}
-      config.accounts.forEach(element => {
+      accounts.forEach(element => {
         let type
         if (element.type === 'approval') type = 'Approval'
         else type = 'Automatic'
