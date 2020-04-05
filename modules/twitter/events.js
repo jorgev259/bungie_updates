@@ -158,7 +158,7 @@ function evalTweet (client, db, tweet, item) {
 
           out.embed = embed
 
-          client.guilds.get(ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
+          client.guilds.cache.get(ownerGuild).channels.find(c => c.name === 'tweet-approval').send(out).then(m => {
             m.react('✅').then(() => {
               m.react('❎').then(() => {
                 db.prepare('INSERT INTO approval (id,url) VALUES (?,?)').run(m.id, url)
@@ -242,6 +242,6 @@ function postTweet (client, db, content, tweetId = null, retweet = false) {
 
 function updateTopic (client) {
   const { ownerGuild } = client.data.lotus_config.twitter
-  const found = client.guilds.get(ownerGuild).channels.find(c => c.name === 'tweet-approval')
+  const found = client.guilds.cache.get(ownerGuild).channels.find(c => c.name === 'tweet-approval')
   if (found) found.setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
 }
