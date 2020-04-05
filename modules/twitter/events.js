@@ -34,7 +34,7 @@ module.exports = {
     },
 
     async ready (client, db, moduleName) {
-      const { rateTwitter, accounts, twitter } = client.data['lotus_config.twitter']
+      const { rateTwitter, accounts, twitter } = client.data.lotus_config.twitter
       const twit = require('twit')(twitter)
       run()
 
