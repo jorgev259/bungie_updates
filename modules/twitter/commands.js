@@ -34,7 +34,7 @@ module.exports.commands = {
     async execute (client, msg, param, db) {
       client.guilds.forEach(guild => {
         // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
-        const { defaultChannel } = client.data['lotus_config.twitter']
+        const { defaultChannel } = client.data.lotus_config.twitter
 
         if (!guild.channels.some(c => c.name === defaultChannel)) {
           guild.channels.create(defaultChannel)
@@ -45,7 +45,7 @@ module.exports.commands = {
   accounts: {
     desc: 'Shows a list of the accounts being tracked',
     async execute (client, msg, param, db) {
-      const { accounts } = client.data['lotus_config.twitter']
+      const { accounts } = client.data.lotus_config.twitter
       const perms = {}
       accounts.forEach(element => {
         let type
@@ -75,7 +75,7 @@ module.exports.commands = {
       // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
       // console.log(channel)
 
-      const { defaultChannel } = client.data['lotus_config.twitter']
+      const { defaultChannel } = client.data.lotus_config.twitter
       msg.guild.channels.find(c => c.name === defaultChannel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
     }
   }

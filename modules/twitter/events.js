@@ -24,7 +24,7 @@ module.exports = {
   },
   events: {
     async guildCreate (client, db, moduleName, guild) {
-      const { defaultChannel } = client.data['lotus_config.twitter']
+      const { defaultChannel } = client.data.lotus_config.twitter
       // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, config.default_channel).value
 
       if (!guild.channels.some(c => c.name === defaultChannel)) {
@@ -99,7 +99,7 @@ module.exports = {
     },
 
     async messageReactionAdd (client, db, moduleName, reaction, user) {
-      const { ownerGuild } = client.data['lotus_config.twitter']
+      const { ownerGuild } = client.data.lotus_config.twitter
       if (reaction.message.guild.id !== ownerGuild) return
       if (reaction.message.partial) await reaction.message.fetch()
       if (
@@ -134,7 +134,7 @@ module.exports = {
 }
 
 function evalTweet (client, db, tweet, item) {
-  const { ownerGuild } = client.data['lotus_config.twitter']
+  const { ownerGuild } = client.data.lotus_config.twitter
   const { type } = item
   const url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
   if (type !== 'media') {
@@ -234,14 +234,14 @@ function screenshotTweet (client, id, usePath) {
 }
 
 function postTweet (client, db, content, tweetId = null, retweet = false) {
-  const { twitter } = client.data['lotus_config.twitter']
+  const { twitter } = client.data.lotus_config.twitter
   const twit = require('twit')(twitter)
   broadcast(client, db, content)
   if (twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
 
 function updateTopic (client) {
-  const { ownerGuild } = client.data['lotus_config.twitter']
+  const { ownerGuild } = client.data.lotus_config.twitter
   const found = client.guilds.get(ownerGuild).channels.find(c => c.name === 'tweet-approval')
   if (found) found.setTopic(`Guilds: ${client.guilds.size} / Processing: ${queue.size}`)
 }
