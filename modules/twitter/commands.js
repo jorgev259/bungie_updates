@@ -76,7 +76,7 @@ module.exports.commands = {
       // console.log(channel)
 
       const { defaultChannel } = client.data.lotus_config.twitter
-      msg.guild.channels.find(c => c.name === defaultChannel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
+      msg.guild.channels.cache.find(c => c.name === defaultChannel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
     }
   }
 
