@@ -11,7 +11,7 @@ const reactions = ['✅', '❎']
 
 module.exports = {
   async guildCreate (client, db, moduleName, guild) {
-    const { defaultChannel } = client.data.lotus_config.twitter
+    const { defaultChannel } = client.config.twitter_global.config
     // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, config.default_channel).value
 
     if (!guild.channels.some(c => c.name === defaultChannel)) {

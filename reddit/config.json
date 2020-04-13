@@ -1,0 +1,16 @@
+{
+    "accounts":[],
+    "twitter": {
+        "consumer_key": "...",
+        "consumer_secret": "...",
+        "access_token": "...",
+        "access_token_secret": "..."
+    },
+    "reddit":{
+        "userAgent": "put your user-agent string here",
+        "clientId": "put your client id here",
+        "clientSecret": "put your client secret here",
+        "refreshToken": "put your refresh token here"
+      },
+    "rateReddit":10000
+}

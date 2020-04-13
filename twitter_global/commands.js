@@ -1,8 +1,8 @@
 const { broadcast } = require('./util.js')
-const { MessageEmbed } = require('discord.js')
+const { MessageEmbed } = global.requireFn('discord.js')
 
-module.exports.commands = {
-  change: {
+module.exports = {
+  /* change: {
     usage: 'change #channel-name',
     desc: 'Changes the channel where the tweets are sent',
     async execute (client, msg, param, db) {
@@ -16,7 +16,7 @@ module.exports.commands = {
       // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
       msg.channel.send('Settings updated')
     }
-  },
+  }, */
   broadcast: {
     desc: 'Sends a message to all servers',
     config: {
@@ -32,11 +32,11 @@ module.exports.commands = {
       ownerOnly: true
     },
     async execute (client, msg, param, db) {
-      client.guilds.forEach(guild => {
+      client.guilds.cache.forEach(guild => {
         // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
-        const { defaultChannel } = client.data.lotus_config.twitter
+        const { defaultChannel } = client.config.twitter_global.config
 
-        if (!guild.channels.some(c => c.name === defaultChannel)) {
+        if (!guild.channels.cache.some(c => c.name === defaultChannel)) {
           guild.channels.create(defaultChannel)
         }
       })
@@ -45,7 +45,7 @@ module.exports.commands = {
   accounts: {
     desc: 'Shows a list of the accounts being tracked',
     async execute (client, msg, param, db) {
-      const { accounts } = client.data.lotus_config.twitter
+      const { accounts } = client.config.twitter_global.config
       const perms = {}
       accounts.forEach(element => {
         let type
@@ -62,7 +62,6 @@ module.exports.commands = {
 
       for (let i = 0; i < types.length; i++) {
         embed.addField(types[i], perms[types[i]].join('\n'))
-        if (i !== types.length - 1) embed.addBlankField()
       }
 
       msg.channel.send(embed)
@@ -75,7 +74,7 @@ module.exports.commands = {
       // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
       // console.log(channel)
 
-      const { defaultChannel } = client.data.lotus_config.twitter
+      const { defaultChannel } = client.config.twitter_global.config
       msg.guild.channels.cache.find(c => c.name === defaultChannel).send('Dont mind me, just checking everything is working. (Test Announcement)', { files: ['modules/twitter/test.gif'] }).catch(err => msg.channel.send(err.message))
     }
   }
