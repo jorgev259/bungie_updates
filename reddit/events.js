@@ -28,7 +28,7 @@ module.exports = {
                   if (result) post(comment, item)
                 })
               } else {
-                post(comment)
+                post(comment, item)
               }
             })
           }
