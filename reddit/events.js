@@ -4,7 +4,7 @@ const Snoowrap = global.requireFn('snoowrap')
 var twitterText = global.requireFn('twitter-text')
 
 module.exports = {
-  async ready (client, db, moduleName) {
+  async ready (client, sequelize, moduleName) {
     const { reddit, accounts, twitter, rateReddit } = client.config.reddit.config
     const twit = global.requireFn('twit')(twitter)
     const r = new Snoowrap(reddit)
@@ -13,23 +13,25 @@ module.exports = {
 
     function run () {
       accounts.forEach(async item => {
+        const { reddit } = sequelize.models
         const { account } = item
-        const proc = db.prepare('SELECT id FROM reddits WHERE user = ?').get(account)
+        const proc = await reddit.findByPk(account)
 
         if (proc) {
           const comments = (await r.getUser(account).getComments({ before: proc.id })).sort(function (a, b) { return a.created - b.created })
           if (comments.length > 0) {
             console.log(`${account}: ${comments.length} tweets`)
-            db.prepare('UPDATE reddits SET id =? WHERE user =?').run(`t1_${comments[comments.length - 1].id}`, comments[comments.length - 1].author.name)
+            proc.id = `t1_${comments[comments.length - 1].id}`
+            await proc.save()
 
             comments.forEach(comment => {
-              if (!item.allowed || item.allowed.includes(comment.subreddit)) post(comment, item)
+              if (!item.allowed || item.allowed.includes(comment.subreddit.display_name)) post(comment, item)
             })
           }
         } else {
           const res = await r.getUser(account).getComments({ limit: 1 })
           if (res[0]) {
-            db.prepare('INSERT OR IGNORE INTO reddits(user,id) VALUES(?,?)').run(res[0].author.name, `t1_${res[0].id}`)
+            await reddit.create({ user: res[0].author.name, id: `t1_${res[0].id}` })
           }
           console.log(`Synced ${res[0].author.name}`)
 

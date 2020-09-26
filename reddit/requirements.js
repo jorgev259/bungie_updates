@@ -1,5 +1,12 @@
-module.exports = (client, db) => {
-  db.prepare('CREATE TABLE IF NOT EXISTS reddits (id TEXT, user TEXT, PRIMARY KEY (user))').run()
+const { DataTypes } = global.requireFn('sequelize')
+module.exports = (client, sequelize) => {
+  sequelize.define('reddit', {
+    user: {
+      type: DataTypes.STRING,
+      primaryKey: true
+    },
+    id: DataTypes.STRING
+  })
 }
 
 /*
