@@ -23,13 +23,7 @@ module.exports = {
             db.prepare('UPDATE reddits SET id =? WHERE user =?').run(`t1_${comments[comments.length - 1].id}`, comments[comments.length - 1].author.name)
 
             comments.forEach(comment => {
-              if (item.filter) {
-                item.filter(comment).then(result => {
-                  if (result) post(comment, item)
-                })
-              } else {
-                post(comment, item)
-              }
+              if (!item.allowed || item.allowed.includes(comment.subreddit)) post(comment, item)
             })
           }
         } else {
@@ -51,10 +45,11 @@ module.exports = {
     }
 
     async function post (comment, item) {
+      console.log(comment)
       const title = `${comment.link_title}\n`
       const context = `${comment.parent_id.startsWith('t1') ? `"${await r.getComment(comment.parent_id.split('_')[1]).body}"\n` : ''}`
       const url = ` https://reddit.com${comment.permalink}`
-      const body = `(Reply by ${item.handle}): ${comment.body}`
+      const body = `(Reply by ${comment.author.name}): ${comment.body}`
 
       const parse = twitterText.parseTweet(`${title}${context}${body}${url}`)
       if (parse.valid) twit.post('statuses/update', { status: `${title}${context}${body}${url}` })
