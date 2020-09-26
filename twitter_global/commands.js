@@ -22,8 +22,8 @@ module.exports = {
     config: {
       ownerOnly: true
     },
-    async execute (client, msg, param, db) {
-      broadcast(client, db, param.slice(1).join(' '))
+    async execute (client, msg, param, sequelize) {
+      broadcast(client, sequelize, param.slice(1).join(' '))
     }
   },
   sync: {
@@ -31,7 +31,7 @@ module.exports = {
     config: {
       ownerOnly: true
     },
-    async execute (client, msg, param, db) {
+    async execute (client) {
       client.guilds.cache.forEach(guild => {
         // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, 'twitter_channel').value
         const { defaultChannel } = client.config.twitter_global.config
@@ -44,7 +44,7 @@ module.exports = {
   },
   accounts: {
     desc: 'Shows a list of the accounts being tracked',
-    async execute (client, msg, param, db) {
+    async execute (client, msg) {
       const { accounts } = client.config.twitter_global.config
       const perms = {}
       accounts.forEach(element => {
@@ -69,7 +69,7 @@ module.exports = {
   },
   test: {
     desc: 'Sends a test announcement.',
-    async execute (client, msg, param, db) {
+    async execute (client, msg) {
       // let { name } = db.prepare('SELECT name FROM tweetChannels WHERE guild=?').get(msg.guild.id)
       // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(msg.guild.id, 'twitter_channel').value
       // console.log(channel)

@@ -12,7 +12,7 @@ let browser
 const reactions = ['✅', '❎']
 
 module.exports = {
-  async guildCreate (client, db, moduleName, guild) {
+  async guildCreate (client, sequelize, moduleName, guild) {
     const { defaultChannel } = client.config.twitter_global.config
     // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, config.default_channel).value
 
@@ -22,7 +22,8 @@ module.exports = {
     updateTopic(client)
   },
 
-  async ready (client, db, moduleName) {
+  async ready (client, sequelize, moduleName) {
+    const { globalProcessed, globalTweets } = sequelize.models
     fs.ensureDirSync('temp')
     const { rateTwitter, accounts, twitter } = client.config.twitter_global.config
 
@@ -40,42 +41,47 @@ module.exports = {
     function run () {
       accounts.forEach(item => {
         const { account, type } = item
-        const proc = db.prepare('SELECT tweet FROM global_processed WHERE user = ?').get(account)
+        const proc = globalProcessed.findByPk(account)
 
         if (proc) {
-          twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
+          twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(async res => {
             const { data } = res
             if (data[0]) {
-              db.prepare('INSERT OR IGNORE INTO global_processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
-              db.prepare('UPDATE global_processed SET tweet = ? WHERE user = ?').run(data[0].id_str, data[0].user.screen_name)
+              const [instance, created] = await globalProcessed.findOrCreate({ where: { user: data[0].user.screen_name }, defaults: { tweet: data[0].id_str } })
+              if (!created) {
+                instance.tweet = data[0].id_str
+                await instance.save()
+              }
             }
 
             if (data.length > 0) console.log(`${account}: ${data.length} tweets`)
-            data.forEach(tweet => {
-              const check = db.prepare('SELECT id FROM global_tweets WHERE id=? AND user=?').get(
-                tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
-                tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
-              )
+            data.forEach(async tweet => {
+              const check = await globalTweets.findOne({
+                where: {
+                  id: tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
+                  user: tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
+                }
+              })
 
               if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
                 if (tweet.retweeted) tweet = tweet.retweeted_status
-                db.prepare('INSERT INTO global_tweets (id,user) VALUES (?,?)').run(tweet.id_str, tweet.user.screen_name)
+                await globalTweets.create({ id: tweet.id_str, user: tweet.user.screen_name })
 
                 if (item.filter) {
                   item.filter(tweet).then(result => {
-                    if (result) evalTweet(client, db, tweet, item)
+                    if (result) evalTweet(client, sequelize, tweet, item)
                   })
                 } else {
-                  evalTweet(client, db, tweet, item)
+                  evalTweet(client, sequelize, tweet, item)
                 }
               }
             })
           }).catch(err => { console.log(err); console.log({ screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }) })
         } else {
-          twit.get('statuses/user_timeline', { screen_name: account, count: 1 }).then(res => {
+          twit.get('statuses/user_timeline', { screen_name: account, count: 1 }).then(async res => {
             const { data } = res
             if (data[0]) {
-              db.prepare('INSERT OR IGNORE INTO global_processed(user,tweet) VALUES(?,?)').run(data[0].user.screen_name, data[0].id_str)
+              await globalProcessed.findOrCreate({ where: { user: data[0].user.screen_name }, defaults: { tweet: data[0].id_str } })
             }
             console.log(`Synced ${account}`)
           })
@@ -88,7 +94,8 @@ module.exports = {
     updateTopic(client)
   },
 
-  async messageReactionAdd (client, db, moduleName, reaction, user) {
+  async messageReactionAdd (client, sequelize, moduleName, reaction, user) {
+    const { globalApproval } = sequelize.models
     const { ownerGuild } = global.requireFn('./lotus/config.json')
     if (reaction.message.guild.id !== ownerGuild) return
     if (reaction.message.partial) await reaction.message.fetch()
@@ -99,21 +106,21 @@ module.exports = {
     ) {
       switch (reaction.emoji.name) {
         case '✅': {
-          const tweet = db.prepare('SELECT url FROM global_approval WHERE id=?').get(reaction.message.id)
+          const tweet = await globalApproval.findByPk(reaction.message.id)
           if (!tweet) return
 
           const tweetId = tweet.url.split('/').slice(-2)[0]
-          postTweet(client, db, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
+          postTweet(client, sequelize, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
 
           reaction.message.delete()
           break
         }
 
         case '❎': {
-          const tweetFound = db.prepare('SELECT url FROM global_approval WHERE id=?').get(reaction.message.id)
-          if (!tweetFound) return
+          const tweet = await globalApproval.findByPk(reaction.message.id)
+          if (!tweet) return
 
-          db.prepare('DELETE FROM global_approval WHERE id=?').run(reaction.message.id)
+          await tweet.destroy()
           reaction.message.delete()
           break
         }
@@ -122,7 +129,8 @@ module.exports = {
   }
 }
 
-function evalTweet (client, db, tweet, item) {
+function evalTweet (client, sequelize, tweet, item) {
+  const { globalApproval } = sequelize.models
   const { ownerGuild } = global.requireFn('./lotus/config.json')
   const { type } = item
   const url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
@@ -150,7 +158,7 @@ function evalTweet (client, db, tweet, item) {
           client.guilds.cache.get(ownerGuild).channels.cache.find(c => c.name === 'tweet-approval').send(out).then(m => {
             m.react('✅').then(() => {
               m.react('❎').then(() => {
-                db.prepare('INSERT INTO global_approval (id,url) VALUES (?,?)').run(m.id, url)
+                globalApproval.create({ id: m.id, url })
               })
             })
           })
@@ -162,7 +170,7 @@ function evalTweet (client, db, tweet, item) {
         {
           const msg = { content: `<${url}>`, files: [shotBuffer] }
 
-          postTweet(client, db, msg, tweet.id_str, type !== 'base_accounts')
+          postTweet(client, sequelize, msg, tweet.id_str, type !== 'base_accounts')
           break
         }
       }
@@ -170,7 +178,7 @@ function evalTweet (client, db, tweet, item) {
   } else {
     const photos = tweet.entities.media.filter(media => media.type === 'photo')
     if (photos.length > 0) {
-      postTweet(client, db,
+      postTweet(client, sequelize,
         { content: `<${url}>${item.extraText ? item.extraText : ''}`, files: photos.map(e => e.media_url_https) },
         tweet.id_str,
         true
@@ -222,10 +230,10 @@ function screenshotTweet (client, id, usePath) {
   })
 }
 
-function postTweet (client, db, content, tweetId = null, retweet = false) {
+function postTweet (client, sequelize, content, tweetId = null, retweet = false) {
   const { twitter } = client.config.twitter_global.config
   const twit = global.requireFn('twit')(twitter)
-  broadcast(client, db, content)
+  broadcast(client, sequelize, content)
   if (twitter.access_token && retweet) twit.post('statuses/retweet/:id', { id: tweetId }).catch(err => console.log(err))
 }
 

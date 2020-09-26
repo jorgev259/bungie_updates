@@ -1,5 +1,5 @@
 module.exports = {
-  broadcast: function (client, db, content) {
+  broadcast: function (client, sequelize, content) {
     const { defaultChannel } = client.config.twitter_global.config
     client.guilds.cache.forEach(guild => {
       try {
