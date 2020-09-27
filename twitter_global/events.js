@@ -55,7 +55,7 @@ module.exports = {
             }
 
             if (data.length > 0) console.log(`${account}: ${data.length} tweets`)
-            data.forEach(async tweet => {
+            asyncForEach(data, async tweet => {
               const check = await globalTweet.findByPk(tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str)
 
               if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
@@ -236,4 +236,10 @@ function updateTopic (client) {
   const { ownerGuild } = global.requireFn('./lotus/config.json')
   const found = client.guilds.cache.get(ownerGuild).channels.cache.find(c => c.name === 'tweet-approval')
   if (found) found.setTopic(`Guilds: ${client.guilds.cache.size} / Processing: ${queue.size}`)
+}
+
+async function asyncForEach (array, callback) {
+  for (let index = 0; index < array.length; index++) {
+    await callback(array[index], index, array)
+  }
 }

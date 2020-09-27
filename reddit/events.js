@@ -12,7 +12,7 @@ module.exports = {
     console.log('Running reddit cycles')
 
     function run () {
-      accounts.forEach(async item => {
+      accounts.map(async item => {
         const { reddit } = sequelize.models
         const { account } = item
         const proc = await reddit.findByPk(account)
@@ -93,6 +93,7 @@ module.exports = {
         }
       })
     }
+
     function parseBody (parts, rest, cut, url) {
       let working = true
       while (working) {
