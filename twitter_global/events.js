@@ -58,14 +58,14 @@ module.exports = {
             data.forEach(async tweet => {
               const check = await globalTweets.findOne({
                 where: {
-                  id: tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
+                  tweet: tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   user: tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
                 }
               })
 
               if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
                 if (tweet.retweeted) tweet = tweet.retweeted_status
-                await globalTweets.create({ id: tweet.id_str, user: tweet.user.screen_name })
+                await globalTweets.create({ tweet: tweet.id_str, user: tweet.user.screen_name })
 
                 if (item.filter) {
                   item.filter(tweet).then(result => {
