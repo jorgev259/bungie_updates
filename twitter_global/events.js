@@ -39,9 +39,9 @@ module.exports = {
     }
 
     function run () {
-      accounts.forEach(item => {
+      asyncForEach(accounts, async item => {
         const { account, type } = item
-        const proc = globalProcessed.findByPk(account)
+        const proc = await globalProcessed.findByPk(account)
 
         if (proc) {
           twit.get('statuses/user_timeline', { screen_name: account, since_id: proc.tweet, tweet_mode: 'extended' }).then(async res => {
