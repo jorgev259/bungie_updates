@@ -23,7 +23,7 @@ module.exports = {
   },
 
   async ready (client, sequelize, moduleName) {
-    const { globalProcessed, globalTweets } = sequelize.models
+    const { globalProcessed, globalTweet } = sequelize.models
     fs.ensureDirSync('temp')
     const { rateTwitter, accounts, twitter } = client.config.twitter_global.config
 
@@ -56,7 +56,7 @@ module.exports = {
 
             if (data.length > 0) console.log(`${account}: ${data.length} tweets`)
             data.forEach(async tweet => {
-              const check = await globalTweets.findOne({
+              const check = await globalTweet.findOne({
                 where: {
                   tweet: tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   user: tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name
@@ -65,7 +65,7 @@ module.exports = {
 
               if (!check || (tweet.is_quote_status && type !== 'base_accounts')) {
                 if (tweet.retweeted) tweet = tweet.retweeted_status
-                await globalTweets.create({ tweet: tweet.id_str, user: tweet.user.screen_name })
+                await globalTweet.create({ tweet: tweet.id_str, user: tweet.user.screen_name })
 
                 if (item.filter) {
                   item.filter(tweet).then(result => {
