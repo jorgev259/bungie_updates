@@ -10,7 +10,7 @@ let browser
 const reactions = ['✅', '❎']
 
 module.exports = {
-  async guildCreate (client, db, moduleName, guild) {
+  async guildCreate (client, sequelize, moduleName, guild) {
     const { defaultChannel } = client.config.twitter_global.config
     // var channel = db.prepare('SELECT value FROM config WHERE guild=? AND type=?').get(guild.id, config.default_channel).value
 
@@ -19,8 +19,9 @@ module.exports = {
     }
   },
 
-  async ready (client, db, moduleName) {
+  async ready (client, sequelize, moduleName) {
     const { rateTwitter, twitter } = client.config.twitter_guild.config
+    const { guildAccounts, guildProcessed, guildTweets } = sequelize.models
     const twit = global.requireFn('twit')(twitter)
     run()
 
@@ -30,41 +31,46 @@ module.exports = {
       } catch (err) { console.log(err) }
     }
 
-    function run () {
-      const accounts = db.prepare('SELECT * FROM guild_accounts').all()
-      accounts.forEach(item => {
+    async function run () {
+      const accounts = await guildAccounts.findAll()
+      accounts.forEach(async item => {
         const { guild, user } = item
-        const proc = db.prepare('SELECT tweet FROM guild_processed WHERE user = ? AND guild = ?').get(user, guild)
+        const proc = await guildProcessed.findOne({ where: { user, guild } })
 
         if (proc) {
-          twit.get('statuses/user_timeline', { screen_name: user, since_id: proc.tweet, tweet_mode: 'extended' }).then(res => {
+          twit.get('statuses/user_timeline', { screen_name: user, since_id: proc.tweet, tweet_mode: 'extended' }).then(async res => {
             const { data } = res
             if (data[0]) {
-              db.prepare('INSERT OR IGNORE INTO guild_processed (guild,user,tweet) VALUES(?,?,?)').run(guild, data[0].user.screen_name, data[0].id_str)
-              db.prepare('UPDATE guild_processed SET tweet = ? WHERE user = ? AND guild = ?').run(data[0].id_str, data[0].user.screen_name, guild)
+              const [itemCreated, created] = await guildProcessed.findOrCreate({ where: { guild, user: data[0].user.screen_name }, defaults: { tweet: data[0].id_str } })
+              if (!created) {
+                itemCreated.tweet = data[0].id_str
+                await itemCreated.save()
+              }
             }
 
             if (data.length > 0) console.log(`${user}: ${data.length} tweets`)
-            data.forEach(tweet => {
-              const check = db.prepare('SELECT id FROM guild_tweets WHERE id=? AND user=? AND guild = ?').get(
-                tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
-                tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name,
-                guild
-              )
+            data.forEach(async tweet => {
+              const check = await guildTweets.findOne({
+                where: {
+                  id: tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
+                  user: tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name,
+                  guild
+                }
+              })
 
               if (!check || tweet.is_quote_status) {
                 if (tweet.retweeted) tweet = tweet.retweeted_status
-                db.prepare('INSERT INTO guild_tweets (id,user,guild) VALUES (?,?,?)').run(tweet.id_str, tweet.user.screen_name, guild)
+                await guildTweets.create({ id: tweet.id_str, user: tweet.user.screen_name, guild })
 
-                evalTweet(client, db, tweet, item)
+                evalTweet(client, sequelize, tweet, item)
               }
             })
           }).catch(err => { console.log(err); console.log({ screen_name: user, since_id: proc.tweet, tweet_mode: 'extended' }) })
         } else {
-          twit.get('statuses/user_timeline', { screen_name: user, count: 1 }).then(res => {
+          twit.get('statuses/user_timeline', { screen_name: user, count: 1 }).then(async res => {
             const { data } = res
             if (data[0]) {
-              db.prepare('INSERT OR IGNORE INTO guild_processed(guild,user,tweet) VALUES(?,?,?)').run(guild, data[0].user.screen_name, data[0].id_str)
+              await guildProcessed.findOrCreate({ where: { user: data[0].user.screen_name, guild }, defaults: { tweet: data[0].id_str } })
             }
             console.log(`Synced ${user}`)
           })
@@ -75,7 +81,8 @@ module.exports = {
     }
   },
 
-  async messageReactionAdd (client, db, moduleName, reaction, user) {
+  async messageReactionAdd (client, sequelize, moduleName, reaction, user) {
+    const { guildApproval } = sequelize.models
     if (reaction.message.partial) await reaction.message.fetch()
     if (
       reaction.message.channel.name === 'tweet-approval' &&
@@ -84,21 +91,21 @@ module.exports = {
     ) {
       switch (reaction.emoji.name) {
         case '✅': {
-          const tweet = db.prepare('SELECT url FROM guild_approval WHERE id=? AND guild=?').get(reaction.message.id, reaction.message.guild.id)
+          const tweet = await guildApproval.findOne({ where: { id: reaction.message.id, guild: reaction.message.guild.id } })
           if (!tweet) return
 
           const tweetId = tweet.url.split('/').slice(-2)[0]
-          postTweet(client, db, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
+          postTweet(client, sequelize, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
 
           reaction.message.delete()
           break
         }
 
         case '❎': {
-          const tweetFound = db.prepare('SELECT url FROM guild_approval WHERE id=? AND guild=?').get(reaction.message.id, reaction.message.guild.id)
+          const tweetFound = await guildApproval.findOne({ where: { id: reaction.message.id, guild: reaction.message.guild.id } })
           if (!tweetFound) return
 
-          db.prepare('DELETE FROM guild_approval WHERE id=? AND guild=?').run(reaction.message.id, reaction.message.guild.id)
+          await tweetFound.destroy()
           reaction.message.delete()
           break
         }
@@ -107,7 +114,8 @@ module.exports = {
   }
 }
 
-function evalTweet (client, db, tweet, item) {
+function evalTweet (client, sequelize, tweet, item) {
+  const { guildApproval } = sequelize.models
   const { guild, type, channel } = item
   const url = `https://twitter.com/${tweet.user.screen_name}/status/${tweet.id_str}/`
   if (type !== 'media') {
@@ -129,13 +137,11 @@ function evalTweet (client, db, tweet, item) {
 
           out.embed = embed
 
-          client.guilds.cache.get(guild).channels.cache.find(c => c.name === 'tweet-approval').send(out).then(m => {
-            m.react('✅').then(() => {
-              m.react('❎').then(() => {
-                db.prepare('INSERT INTO guild_approval (guild,id,url) VALUES (?,?,?)').run(guild, m.id, url)
-              })
-            })
-          })
+          client.guilds.cache.get(guild).channels.cache.find(c => c.name === 'tweet-approval').send(out).then(m =>
+            m.react('✅').then(() =>
+              m.react('❎').then(() => guildApproval.create({ guild, url, id: m.id }))
+            )
+          )
           break
         }
 
@@ -143,7 +149,7 @@ function evalTweet (client, db, tweet, item) {
         {
           const msg = { content: `<${url}>`, files: [shotBuffer] }
 
-          postTweet(client, db, msg, guild, channel)
+          postTweet(client, sequelize, msg, guild, channel)
           break
         }
       }
@@ -151,7 +157,7 @@ function evalTweet (client, db, tweet, item) {
   } else {
     const photos = tweet.entities.media.filter(media => media.type === 'photo')
     if (photos.length > 0) {
-      postTweet(client, db,
+      postTweet(client, sequelize,
         { content: `<${url}>${item.extraText ? item.extraText : ''}`, files: photos.map(e => e.media_url_https) },
         guild, channel
       )
@@ -202,6 +208,6 @@ function screenshotTweet (client, id, usePath) {
   })
 }
 
-function postTweet (client, db, content, guild, channel) {
+function postTweet (client, sequelize, content, guild, channel) {
   client.guilds.cache.get(guild).channels.cache.get(channel).send(content)
 }
