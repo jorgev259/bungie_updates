@@ -21,7 +21,7 @@ module.exports = {
 
   async ready (client, sequelize, moduleName) {
     const { rateTwitter, twitter } = client.config.twitter_guild.config
-    const { guildAccounts, guildProcessed, guildTweets } = sequelize.models
+    const { guildAccounts, guildProcessed, guildTweet } = sequelize.models
     const twit = global.requireFn('twit')(twitter)
     run()
 
@@ -50,7 +50,7 @@ module.exports = {
 
             if (data.length > 0) console.log(`${user}: ${data.length} tweets`)
             data.forEach(async tweet => {
-              const check = await guildTweets.findOne({
+              const check = await guildTweet.findOne({
                 where: {
                   id: tweet.retweeted_status ? tweet.retweeted_status.id_str : tweet.id_str,
                   user: tweet.retweeted_status ? tweet.retweeted_status.user.screen_name : tweet.user.screen_name,
@@ -60,7 +60,7 @@ module.exports = {
 
               if (!check || tweet.is_quote_status) {
                 if (tweet.retweeted) tweet = tweet.retweeted_status
-                await guildTweets.create({ id: tweet.id_str, user: tweet.user.screen_name, guild })
+                await guildTweet.create({ id: tweet.id_str, user: tweet.user.screen_name, guild })
 
                 evalTweet(client, sequelize, tweet, item)
               }
