@@ -1,5 +1,6 @@
 // const { log } = require('../../utilities.js')
 const path = require('path')
+const fs = global.requireFn('fs-extra')
 const puppeteer = global.requireFn('puppeteer')
 const { default: PQueue } = global.requireFn('p-queue')
 const { MessageEmbed } = global.requireFn('discord.js')
@@ -198,6 +199,8 @@ function screenshotTweet (client, id, usePath) {
             height: rect.height
           }
         }
+
+        fs.ensureDirSync('temp')
         if (usePath) screenOptions.path = `temp/${id}.png`
 
         const buffer = await page.screenshot(screenOptions)
