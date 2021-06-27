@@ -24,6 +24,13 @@ module.exports = {
     const { rateTwitter, twitter } = client.config.twitter_guild.config
     const { guildAccounts, guildProcessed, guildTweet } = sequelize.models
     const twit = global.requireFn('twit')(twitter)
+
+    client.guilds.cache.forEach(guild => {
+      try {
+        guild.channels.cache.find(c => c.name === 'tweet-approval').messages.fetch()
+      } catch (err) { console.log(err) }
+    })
+
     run()
 
     async function changeTimeout () {
