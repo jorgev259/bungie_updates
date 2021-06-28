@@ -90,7 +90,7 @@ module.exports = {
   },
 
   async messageReactionAdd (client, sequelize, moduleName, reaction, user) {
-    const { guildApproval } = sequelize.models
+    const { guildApproval, guildAccounts } = sequelize.models
     if (reaction.message.partial) await reaction.message.fetch()
     if (
       reaction.message.channel.name === 'tweet-approval' &&
@@ -103,7 +103,9 @@ module.exports = {
           if (!tweet) return
 
           const tweetId = tweet.url.split('/').slice(-2)[0]
-          postTweet(client, sequelize, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweetId)
+          const item = await guildAccounts.findOne({ where: { guild: tweet.guild } })
+
+          postTweet(client, sequelize, { content: `<${tweet.url}>`, files: [`temp/${tweetId}.png`] }, tweet.guild, item.channel)
 
           reaction.message.delete()
           break
